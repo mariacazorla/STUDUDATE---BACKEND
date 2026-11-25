@@ -17,7 +17,7 @@ El proyecto parte del ejercicio del Seminario 7 (JWT, refresh token en cookie Ht
 WebSockets), que se guarda tal cual en el tag `seminari7-base`. De ahí se trae la autenticación, la
 estructura en capas y la forma de hacer la paginación, el borrado lógico y Swagger.
 
-El frontend Angular que consume esta API está en
+El frontend que consume esta API (la web en React y la app del móvil) está en
 [STUDATE---FRONTEND](https://github.com/mariacazorla/STUDATE---FRONTEND).
 
 Las tareas del sprint, el contrato con el frontend y la bitácora están en [LOGS.md](LOGS.md); cómo
@@ -43,6 +43,7 @@ Lo que ya está instalado y funcionando:
 | [swagger-jsdoc](https://github.com/Surnet/swagger-jsdoc) | 6.3 | Construye esa documentación leyendo los comentarios `@openapi` de las rutas |
 | [joi-to-swagger](https://github.com/Twipped/joi-to-swagger) | 6.2 | Convierte los esquemas de Joi en los esquemas de la documentación |
 | [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) | 9.0 | Firma y verifica los tokens JWT (`sign` y `verify`) |
+| [socket.io](https://socket.io/) | 4.8 | El chat de los Dates en tiempo real (WebSockets), en el mismo puerto que la API |
 | [tsx](https://tsx.is/) | 4.23 | Ejecuta TypeScript sin compilar y reinicia la API al guardar (`npm run dev`) |
 | [Oxlint](https://oxc.rs/docs/guide/usage/linter) | 1.85 | Analiza el código de `src/` y detecta errores comunes |
 | [Prettier](https://prettier.io/) | extensión de VS Code | Da formato al código al guardar (reglas en `.prettierrc`) |
@@ -83,8 +84,10 @@ cp .env.example .env
 |---|---|---|
 | `MONGO_URL` | Dirección de tu MongoDB | `mongodb://127.0.0.1:27017/studate` |
 | `SERVER_PORT` | Puerto en el que escucha la API | `1337` |
-| `CORS_ORIGIN` | Origen exacto del frontend (con cookies no vale `*`) | `http://localhost:4200` |
+| `CORS_ORIGINS` | Orígenes exactos de los frontends, separados por comas (con cookies no vale `*`) | `http://localhost:5173,http://localhost:8081` |
 | `NODE_ENV` | Con `production`, la cookie del refresh token se marca `Secure` (solo HTTPS) | `development` |
+| `REFRESH_COOKIE_PATH` | Ruta de la cookie del refresh token. Detrás de nginx (`/api`) es `/api/auth` | `/auth` |
+| `COOKIE_SECURE` | Opcional: fuerza si la cookie es `Secure` (`true` o `false`) | lo que diga `NODE_ENV` |
 | `JWT_SECRET` | Secreto con el que se firma el access token. **Obligatoria** | valor de clase en `.env.example` |
 | `JWT_REFRESH_SECRET` | Secreto con el que se firma el refresh token; distinto del anterior. **Obligatoria** | valor de clase en `.env.example` |
 | `JWT_EXPIRES_IN` | Cuánto dura el access token | `15m` (15 minutos) |
@@ -143,23 +146,35 @@ src/
   library/         Utilidades compartidas
     Logging.ts       Mensajes de consola con fecha y color (info, warning, error)
   routes/          El mapa de URLs: qué petición va a qué controller
-    Auth.ts, Users.ts, Grade.ts, Date.ts
+    Auth.ts, Users.ts, Grade.ts, Orla.ts, Date.ts, Plan.ts, Block.ts, Report.ts, SafetyAlert.ts
+  sockets/         El chat en tiempo real con socket.io
+    Chat.ts          Arranca socket.io sobre el servidor HTTP: una sala por Date, turno de palabra y mensajes
+    events.ts        El contrato de eventos del chat (los mismos tipos que tiene el frontend en packages/shared)
+  jobs/            Tareas periódicas del servidor
+    ExpireDates.ts   Cierra cada minuto los Dates pendientes que han caducado
   middleware/      Lo que se ejecuta entre la ruta y el controller
     VerifyToken.ts   Comprueba el token de la cabecera Authorization y deja el usuario en req.user (401).
                      Aquí se amplía también el tipo Request de Express con req.user
+    SocketAuth.ts    Lo mismo para el chat: comprueba el token del handshake de socket.io y deja el usuario en socket.data.user
     RequireRole.ts   Deja pasar solo a un rol concreto (403)
     Joi.ts           Guardas: validan el body (422), el id de la URL (400) y la paginación (400)
-    Cors.ts          Cabeceras de CORS, configuradas con CORS_ORIGIN
+    Cors.ts          Cabeceras de CORS, configuradas con CORS_ORIGINS
     Logger.ts        Escribe en consola cada petición y su código de respuesta
     ErrorHandler.ts  Convierte cualquier error en su código: 400, 401, 404, 409, 422 o 500
   controllers/     Leen la petición (req), llaman al service y eligen la respuesta (res)
-    Auth.ts, Users.ts, Grade.ts, Date.ts
-  services/        Leen y escriben en la base de datos a través de los models. No saben que existe HTTP
-    AuthService.ts, UserService.ts, GradeService.ts, DateService.ts
+    Auth.ts, Users.ts, Grade.ts, Orla.ts, Date.ts, Plan.ts, Block.ts, Report.ts, SafetyAlert.ts
+  services/        Leen y escriben en la base de datos a través de los models. No saben que existe HTTP (ni socket.io)
+    AuthService.ts, UserService.ts, GradeService.ts, OrlaService.ts, DateService.ts, PlanService.ts, ChatService.ts,
+    BlockService.ts, ReportService.ts, SafetyAlertService.ts
   models/          Esquemas de Mongoose y las interfaces de cada recurso
     User.ts          Usuario, y las interfaces de los tokens (payload) y de req.user
     Grade.ts         Voto de La Orla (A+ o F de un usuario a otro)
-    Date.ts          Date (cita entre dos usuarios); se importa como DateModel
+    Date.ts          Date (cita entre dos usuarios) con su historial; se importa como DateModel
+    Plan.ts          Plan (el Cambio de Aula de un Date) con las tiradas de la ruleta
+    Message.ts       Mensaje del chat de un Date
+    Block.ts         Bloqueo de un usuario a otro
+    Report.ts        Parte sobre un usuario, que revisa un admin
+    SafetyAlert.ts   Alerta del botón de ayuda
   utils/           Funciones pequeñas sin dependencias de Express
     password.ts      Cifra y comprueba contraseñas con scrypt
     escape-regexp.ts Escapa el texto de una búsqueda para usarlo en una expresión regular
@@ -189,6 +204,7 @@ El recorrido completo:
 2. `POST /auth/login` con `{ email, password }` responde `{ token, user }`, o 401 si el email o la
    contraseña no son correctos (el mismo mensaje en los dos casos, para no revelar qué emails están
    registrados). El refresh token no va en el JSON: se deja en una **cookie HttpOnly** (ver más abajo).
+   La app del móvil es la excepción: manda la cabecera `X-Client: movil` y lo recibe en el JSON.
 3. En cada petición a una ruta protegida, el cliente envía el token en la cabecera:
    `Authorization: Bearer <token>`.
 4. El middleware `VerifyToken` comprueba la firma y la caducidad, y que el usuario siga activo, y deja el
@@ -197,7 +213,8 @@ El recorrido completo:
 5. El middleware `RequireRole('admin')` comprueba el rol: si el usuario no es `admin`, responde 403.
 6. El access token dura poco (15 minutos). Cuando caduca, el cliente llama a `POST /auth/refresh`
    sin body: el navegador adjunta la cookie y la API responde `{ token }`, un access token nuevo, sin
-   volver a escribir la contraseña. El refresh token dura 7 días.
+   volver a escribir la contraseña. El refresh token dura 7 días. La app del móvil hace la misma
+   llamada con `{ refreshToken }` en el body.
 7. `POST /auth/logout` borra la cookie. A partir de ahí, `/auth/refresh` responde 401.
 
 ### Dónde va cada token
@@ -209,14 +226,27 @@ viaja en la cookie `refreshToken`, que pone el backend con `res.cookie` en el lo
 |---|---|
 | `HttpOnly` | JavaScript no puede leerla (`document.cookie` no la muestra). Un script inyectado por XSS no se la puede llevar |
 | `SameSite=Strict` | El navegador no la envía en peticiones que provoca otra web (CSRF) |
-| `Path=/auth` | Solo se envía a `/auth/refresh` y `/auth/logout`, que son las únicas rutas que la necesitan |
+| `Path=/auth` | Solo se envía a `/auth/refresh` y `/auth/logout`, que son las únicas rutas que la necesitan. Se cambia con `REFRESH_COOKIE_PATH` (detrás de nginx, `/api/auth`) |
 | `Max-Age` | Dura lo mismo que el refresh token (`JWT_REFRESH_EXPIRES_IN`) |
-| `Secure` | Solo por HTTPS. Se activa con `NODE_ENV=production`; en clase va por `http://localhost` |
+| `Secure` | Solo por HTTPS. Se activa con `NODE_ENV=production` (o con `COOKIE_SECURE`); en clase va por `http://localhost` |
 
-Para que el navegador envíe y acepte la cookie entre `localhost:4200` y `localhost:1337`, el frontend
-llama a `/auth/*` con `withCredentials: true` y CORS responde con `credentials: true` y el origen
-exacto de `CORS_ORIGIN` (con credenciales, `*` no está permitido). La cookie la lee `cookie-parser`,
-que la deja en `req.cookies`.
+Para que el navegador envíe y acepte la cookie entre `localhost:5173` y `localhost:1337`, el frontend
+llama a la API con `credentials: 'include'` y CORS responde con `credentials: true` y el origen de la
+petición, si está en la lista de `CORS_ORIGINS` (con credenciales, `*` no está permitido). La cookie la
+lee `cookie-parser`, que la deja en `req.cookies`.
+
+La app del móvil no es un navegador: no tiene cookies HttpOnly ni pasa por CORS. Por eso tiene su
+propio modo, que no cambia nada de lo anterior:
+
+| | Web | App del móvil |
+|---|---|---|
+| Login | Sin cabeceras especiales | Cabecera `X-Client: movil` |
+| Dónde llega el refresh token | Cookie HttpOnly; no aparece en el JSON | En el JSON (`refreshToken`); no se pone cookie |
+| Dónde se guarda | Lo guarda el navegador; JavaScript no lo ve | En el almacén cifrado del teléfono (`expo-secure-store`) |
+| `POST /auth/refresh` | Sin body: viaja la cookie | Body `{ refreshToken }` |
+
+Si a `/auth/refresh` le llegan la cookie y el body, se usa el del body: es el que el cliente ha
+enviado a propósito.
 
 401 y 403 no son lo mismo: 401 es "no sé quién eres" (no hay sesión válida) y 403 es "sé quién eres,
 pero no tienes permiso".
@@ -234,12 +264,18 @@ si su petición estaba bien formada.
 
 | Rutas | Quién puede |
 |---|---|
-| `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` | Cualquiera (refresh necesita la cookie con un refresh token válido) |
+| `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` | Cualquiera (refresh necesita un refresh token válido, en la cookie o en el body) |
 | `/ping`, `/api-docs` | Cualquiera |
 | `/users/me`, `/users/directory` | Cualquier usuario con sesión |
 | `/users`, `/users/:userId`, `/users/:userId/archive`, `/users/:userId/restore` (gestión de usuarios) | Solo `admin` |
 | `/grades` (votos de La Orla) | Solo `admin` |
-| `/dates` | Cualquier usuario con sesión, cada uno sus propios Dates; el admin, todos. Eliminar es solo del `admin` |
+| `/orla` (La Orla del estudiante) | Solo `user` |
+| `/dates`, `/dates/:dateId`, `/dates/:dateId/messages`, `/dates/:dateId/extend` | Cualquier usuario con sesión, cada uno sus propios Dates; el admin, todos |
+| `POST /dates`, `PUT /dates/:dateId`, `DELETE /dates/:dateId` | Solo `admin`: los estudiantes no abren ni cambian Dates a mano |
+| El chat (socket.io) | Cualquier usuario con sesión, solo en las salas de sus propios Dates. Los `admin` entran además en la sala `admins` y reciben las alertas de ayuda |
+| `/blocks` (bloqueos) | Solo `user` |
+| `POST /reports` (mandar un parte), `POST /alerts` (pedir ayuda) | Solo `user` |
+| `GET /reports`, `PUT /reports/:reportId/review`, `GET /alerts`, `PUT /alerts/:alertId/attend` | Solo `admin` |
 
 Decisiones y límites, porque es un proyecto de clase:
 
@@ -316,10 +352,23 @@ Todas las rutas salvo `/auth/*` y `/ping` necesitan la cabecera `Authorization: 
 | DELETE | `/grades/:gradeId` | Elimina un voto (borrado físico). Solo admin | |
 | GET | `/dates` | Lista los Dates, paginados (`?page=&limit=&status=&user=`). El admin ve todos; un usuario, los suyos | |
 | GET | `/dates/:dateId` | Devuelve un Date (un usuario, solo los suyos) | |
-| POST | `/dates` | Abre un Date entre dos usuarios (un usuario, solo si es uno de los dos) | `{ "users": ["<id>", "<id>"] }` |
-| PUT | `/dates/:dateId` | Cambia el Date de bandeja | `{ "status": "ongoing" }` |
-| POST | `/dates/:dateId/extend` | Usa la prórroga: 24 horas más, una sola vez | |
+| GET | `/dates/:dateId/messages` | El historial del chat de un Date, paginado (`?page=&limit=`; la página 1 son los más nuevos). Solo los dos del Date y el admin | |
+| POST | `/dates` | Abre un Date a mano entre dos usuarios. Solo admin | `{ "users": ["<id>", "<id>"] }` |
+| PUT | `/dates/:dateId` | Cambia el Date de bandeja a mano; queda en el historial. Solo admin | `{ "status": "closed", "reason": "..." }` |
+| POST | `/dates/:dateId/extend` | Usa la prórroga: 24 horas más, una sola vez (y no en un Date cerrado) | |
 | DELETE | `/dates/:dateId` | Elimina un Date (borrado físico). Solo admin | |
+| GET | `/blocks` | A quién he bloqueado | |
+| POST | `/blocks` | Bloquear a alguien: cierra el Date que tuviéramos y ninguno vuelve a ver al otro | `{ "blocked": "<id>" }` |
+| DELETE | `/blocks/:userId` | Quitar un bloqueo mío (el Date no se reabre) | |
+| POST | `/reports` | Mandar un parte sobre alguien (queda abierto para el admin) | `{ "reported": "<id>", "reason": "harassment", "date": "<id>", "text": "..." }` |
+| GET | `/reports` | Lista los partes, paginados (`?page=&limit=&status=&severity=&reported=`). Solo admin | |
+| GET | `/reports/:reportId` | Devuelve un parte. Solo admin | |
+| PUT | `/reports/:reportId/review` | Revisa un parte: gravedad y lo que se ha hecho; queda quién y cuándo. Solo admin | `{ "status": "reviewed", "severity": "high", "resolution": "..." }` |
+| POST | `/alerts` | Pedir ayuda: avisa al momento a los admin y a los contactos de confianza (si hay) | `{ "date": "<id>", "message": "..." }` (todo opcional) |
+| GET | `/alerts` | Lista las alertas, paginadas (`?page=&limit=&status=`). Solo admin | |
+| GET | `/alerts/:alertId` | Devuelve una alerta. Solo admin | |
+| PUT | `/alerts/:alertId/attend` | Atiende una alerta; queda quién y cuándo. Solo admin | `{ "status": "attended" }` |
+
 Un usuario tiene `name`, `email` y `role` (`user` o `admin`), los datos de su perfil (`birthDate`,
 `degree` o titulación, `lookingFor` o "Qué busco", `bio` y `photo`) y el estado de su cuenta: `active`
 (si un admin lo ha desactivado) y `deleted` con `deletedAt` (si está archivado). La contraseña nunca se
@@ -345,15 +394,83 @@ cada perfil (409 si se repite) y nadie se puede votar a sí mismo (422). `value`
 deja los votos en los que participa un usuario. Un voto no se archiva: eliminarlo es un borrado físico.
 
 Un **Date** es una cita entre dos usuarios (`users`). Se abre solo cuando los dos se ponen A+ en La Orla
-(al crear un voto A+ o al cambiar uno a A+, si ya existe el A+ contrario), y también se puede abrir a mano.
-Al abrirse se sortea a quién le toca escribir primero (`firstTurn`) y caduca en 24 horas (`expiresAt`); la
-prórroga (`POST /dates/:dateId/extend`) añade 24 horas más una sola vez (`extended`). Está en una de las
+(al crear un voto A+ o al cambiar uno a A+, si ya existe el A+ contrario); el admin también puede abrirlo a
+mano. Al abrirse se sortea a quién le toca escribir primero (`firstTurn`) y caduca en 24 horas (`expiresAt`);
+la prórroga (`POST /dates/:dateId/extend`) añade 24 horas más una sola vez (`extended`). Está en una de las
 bandejas del blog (`status`): `pending` (Pendiente), `ongoing` (En curso) o `closed` (Cerrado). Solo puede
-haber un Date entre cada pareja (409). Un usuario normal solo ve, cambia y abre sus propios Dates; los de
-otros le dan 404. Al eliminar un usuario para siempre se borran también sus Dates.
+haber un Date entre cada pareja (409). Un usuario normal solo ve sus propios Dates; los de otros le dan 404.
+Al eliminar un usuario para siempre se borran también sus Dates.
+
+Los estudiantes **no cambian los Dates de estado a mano**: los estados cambian solos y cada cambio queda en
+el `history` del Date (`[{ status, by?, reason?, at }]`, del más antiguo al más nuevo):
+
+- Nace `pending` (sin `by`: lo abre el servidor por el A+ mutuo; con el `by` del admin si lo abre él).
+- El **primer mensaje** del chat lo pasa a `ongoing` (`startedAt` es la hora de ese mensaje, `by` quien lo escribió).
+- Si **caduca sin mensajes**, el servidor lo cierra (`closed`, `closedReason: 'expired'`, sin `by`): una tarea
+  lo comprueba cada minuto (`src/jobs/ExpireDates.ts`). Un Date en curso no caduca.
+- La **prórroga** no cambia el estado, pero también se apunta (`reason: 'Prórroga de 24 horas'`, `by` quien la pidió).
+- El **admin** puede cambiarlo a mano desde el backoffice (`PUT /dates/:dateId`) con un `reason` opcional; al
+  cerrar, `closedReason` es `'admin'`.
 
 El modelo se llama `Date` en MongoDB, pero en el código se importa como `DateModel`: `Date` ya es la clase de
 fechas de JavaScript, y si el modelo se llamara así, `new Date()` dejaría de funcionar en ese fichero.
+
+## Chat en tiempo real (socket.io)
+
+El chat de cada Date va por **socket.io**, enganchado al mismo servidor HTTP que Express (mismo puerto; en el
+servidor, nginx reenvía `/socket.io/` al contenedor de la API). Los mensajes se guardan en MongoDB (modelo
+`Message`) y el historial se lee por HTTP (`GET /dates/:dateId/messages`); el socket es para lo que pasa
+**ahora**.
+
+**Sin token no se conecta nadie.** El cliente manda el access token en el handshake y el middleware
+`VerifySocketToken` (`src/middleware/SocketAuth.ts`) lo comprueba igual que `VerifyToken`: firma, caducidad y
+que el usuario siga activo. Si falla, el cliente recibe `connect_error` con el mismo mensaje que daría la API
+(`Falta el token`, `El token ha caducado`, `Token no válido`, `Tu cuenta no está activa`) y no entra en ninguna
+sala. El token solo se comprueba al conectar: una conversación abierta no se corta cuando el token caduca a
+los 15 minutos.
+
+```ts
+const socket = io('http://localhost:1337', { auth: { token } });
+```
+
+Cada Date es una **sala** (`date:<id>`) en la que solo entran sus dos usuarios: quien escribe sale siempre del
+token, nunca del payload. Los eventos (`src/sockets/events.ts`):
+
+| Quién | Evento | Payload | Qué hace |
+|---|---|---|---|
+| cliente | `date:join` | `{ dateId }` | Entrar en la sala. Un tercero recibe `chat:error` (el Date "no existe" para él) |
+| cliente | `date:leave` | `{ dateId }` | Salir de la sala |
+| cliente | `date:message` | `{ dateId, text }` | Enviar un mensaje (1 a 1000 caracteres, el mismo Joi que una ruta). Hay que haber entrado antes |
+| cliente | `date:read` | `{ dateId }` | He leído los mensajes de la otra persona (`readAt`) |
+| servidor | `date:joined` | `{ dateId }` | Ya estás en la sala |
+| servidor | `date:message` | el mensaje guardado | A los dos de la sala, también a quien lo escribió (con su `_id` y `createdAt`) |
+| servidor | `date:updated` | el Date entero | El Date ha cambiado: primer mensaje (En curso), caducidad (Cerrado), prórroga o un cambio del admin |
+| servidor | `date:read` | `{ dateId, by, at }` | La otra persona ha leído |
+| servidor | `chat:error` | `{ message }` | Algo no se ha podido hacer |
+
+Las reglas del chat (`src/services/ChatService.ts`): en un Date `pending` solo puede escribir quien tiene el
+primer turno (`firstTurn`, sorteado al abrirlo); el primer mensaje lo pasa a `ongoing` y a partir de ahí
+escriben los dos; en un Date `closed` se puede entrar a leer, pero no escribir.
+
+Los `admin` entran además, al conectar, en la sala `admins`, por la que les llegan al momento las alertas del
+botón de ayuda: `alert:new` (alguien ha pedido ayuda) y `alert:updated` (un admin la ha atendido). Un estudiante
+nunca recibe esos eventos: el rol sale del token.
+
+## Seguridad: bloquear, partes y botón de ayuda
+
+Son las tres funciones de "conciencia digital" del blog, cada una con su modelo y sus rutas:
+
+- **Bloquear** (`/blocks`, modelo `Block`): si alguien te da mala espina, lo bloqueas y ninguno de los dos vuelve
+  a ver al otro: ni en La Orla (no sale y no se puede votar) ni en los chats (el Date que tuvierais se cierra con
+  `closedReason: 'blocked'`, y la otra persona ve el chat cerrado sin que se le diga por qué). A la persona
+  bloqueada no se le avisa. Desbloquear no reabre el Date.
+- **Partes** (`/reports`, modelo `Report`): un estudiante manda un parte sobre alguien (motivo, comentario y, si
+  es desde un chat, el Date). Solo lo ve el admin, que lo revisa poniendo la gravedad y anotando lo que ha hecho;
+  queda guardado qué admin lo revisó y cuándo. De momento no hay nada automático.
+- **Botón de ayuda** (`/alerts`, modelo `SafetyAlert`): durante un Date, el estudiante pide ayuda (todo opcional:
+  un mensaje y desde qué Date). Se crea la alerta, los admin conectados la reciben al momento por el socket y se
+  avisa a los contactos de confianza de Mi perfil, si los tiene (el aviso se simula en el log del servidor, como el
+  email de bienvenida). Sin contactos, la alerta se crea igual. Atenderla deja quién y cuándo.
 
 Códigos de respuesta: 201 al crear, 200 al leer o modificar, 204 al borrar, 400 si el id de la URL
 no tiene forma de id de MongoDB, 401 si falta el token o no es válido, 403 si el usuario no tiene el
@@ -396,7 +513,8 @@ Las piezas comunes (datos generales, esquemas, respuestas de error y el esquema 
 `bearerAuth`) están en `src/config/swagger.ts`. Cada respuesta de error lleva de ejemplo el mensaje que
 devuelve de verdad la API (por ejemplo, `NotArchived`, `OwnUser`, `GradeConflict` o `DateConflict`), para
 que quien hace el frontend sepa qué va a recibir. Las rutas están agrupadas por etiquetas: Health, Auth,
-Users, Grades y Dates. En `src/routes/Auth.ts` la documentación va debajo
+Users, Grades, Orla, Dates, Plans, Blocks, Reports y Alerts. Los eventos del chat no son rutas HTTP y no salen en Swagger: están en la
+tabla de [Chat en tiempo real](#chat-en-tiempo-real-socketio) y en `src/sockets/events.ts`. En `src/routes/Auth.ts` la documentación va debajo
 del código, para que el router se lea de un vistazo.
 
 Para probar las rutas protegidas desde Swagger: ejecuta `POST /auth/login`, copia el `token` de la
@@ -404,10 +522,22 @@ respuesta, pulsa el botón **Authorize** de arriba a la derecha y pégalo (solo 
 `Bearer`). A partir de ahí Swagger envía la cabecera en todas las peticiones. Las rutas con candado son
 las que lo necesitan.
 
+## Diagrama de clases de la base de datos
+
+![Diagrama de clases de la base de datos de Studate](docs/diagrama-bd.svg)
+
+Los ocho modelos de `src/models/` con sus campos, sus índices y sus reglas, agrupados por el sprint en
+que entra cada cosa (Sprint 1, Mínimo 1 y Sprint 2 son lo que hay en el código; Sprint 3 y la entrega
+final, lo previsto). Las flechas son las referencias (`ref`) entre modelos: por ejemplo, un `Date` apunta
+a dos `User` y un `Message` a su `Date` y a quien lo escribió. El diagrama se genera a partir de un solo
+fichero de datos del equipo, el mismo que usa el visor de la base de datos del blog, para que coincida
+con los modelos del código: si un modelo cambia, se cambia ahí y se vuelve a generar.
+
 ## Cómo se ha probado la API
 
 No hay tests automáticos en el backend. Al cerrar cada rama se prueba lo hecho contra la API arrancada y
-con la base de datos recién sembrada (`npm run seed -- --reset`), con curl, también los casos de error: sin
+con la base de datos recién sembrada (`npm run seed -- --reset`), con curl (o `fetch`, y `socket.io-client`
+para el chat), también los casos de error: sin
 token, con el rol que no toca, con ids que no existen o mal formados, con el body mal y con las reglas de
 cada recurso (archivar antes de eliminar, un voto por pareja, una prórroga por Date...). Cada entrada de la
 bitácora de [LOGS.md](LOGS.md) dice qué se probó y cuántas pruebas salieron bien. Un ejemplo:
@@ -420,6 +550,34 @@ curl -X DELETE http://localhost:1337/users/<id de un usuario no archivado> -H "A
 
 La última responde 409 "Archiva el usuario antes de eliminarlo". Las mismas pruebas se pueden hacer desde
 la página de Swagger.
+
+## Docker
+
+La imagen de la API se construye con el `Dockerfile` de la raíz, en dos etapas como en el Seminario 10:
+la primera compila el TypeScript y la segunda se queda solo con lo compilado (`build/`) y las dependencias
+de producción. No lleva el código fuente, ni TypeScript, ni ningún `.env`.
+
+```
+docker build -t studate-api .
+docker run --rm -p 1337:1337 --env-file .env studate-api
+```
+
+**La imagen es la misma en todos los entornos.** Lo que cambia son las variables de entorno que recibe el
+contenedor al arrancar (las de la tabla de arriba). En el servidor, la API va detrás de nginx en `/api`, así
+que ahí se pone `REFRESH_COOKIE_PATH=/api/auth`, y `COOKIE_SECURE` según haya HTTPS o no.
+
+A diferencia del Seminario 10, el seed va dentro de la imagen, compilado (`build/seed.js`), para poder
+llenar la base de datos del servidor sin tener el código allí:
+
+```
+docker run --rm --env-file .env studate-api node build/seed.js
+```
+
+Con `MONGO_URL` apuntando al MongoDB de ese entorno (en el compose, `mongodb://mongodb:27017/studate`).
+Solo inserta si la base de datos está vacía; con `--reset` la rehace.
+
+El `docker compose` que levanta MongoDB, la API y la web está en el repositorio
+[STUDATE---DOCKER](https://github.com/mariacazorla/STUDATE---DOCKER).
 
 ## Cómo contribuir
 

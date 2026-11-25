@@ -25,7 +25,7 @@ const router = express.Router();
  *         schema: { type: integer, minimum: 1, default: 1 }
  *       - in: query
  *         name: limit
- *         schema: { type: integer, minimum: 1, maximum: 100, default: 5 }
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
  *       - in: query
  *         name: search
  *         schema: { type: string, maxLength: 100 }

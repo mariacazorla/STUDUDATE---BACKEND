@@ -136,3 +136,106 @@ Herramienta: Claude Code (Anthropic). Modelo: Claude Opus 5.5.
 - **Prompt:** «Arregla lo del formato como un fix.»
 - **Incoherencias:** en el frontend había 22 ficheros que ya no cumplían Prettier antes del examen. Solo 3 (los de `dates-list`) se han tocado en el Mínimo 1.
 - **Solución:** `prettier --write` solo en `dates-list.ts`, `.html` y `.spec.ts`, en su propia rama de fix. Comprobamos que, quitando espacios, saltos de línea y comas finales, el contenido es idéntico (solo cambia el formato). Los tests, el lint y el build siguen igual. Los otros 19 ficheros no se tocan para no mezclar cambios ajenos al examen.
+
+# Sprint 2
+
+Modelo en el Sprint 2: Claude Fable 5.2.
+
+### 1. Estructura: la sesión, los modelos y la paginación (`feat/estructura`)
+
+- **Pregunta:** cómo dejar el backend preparado para la web en React, la web en Docker y la app del móvil, con todos los modelos del sprint ya creados.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Empezamos por la estructura, que es la base de todo. Las tareas son las del bloque 1 del plan (de la 1 a la 15). Primero el backend. Hay que dejar la sesión preparada para la web en local, la web en Docker y el móvil: CORS con varios orígenes, la cookie del refresh configurable para poder servir la API detrás de /api, y el refresh token también en el body para el móvil, sin quitar la cookie de la web. Además hay que crear ya todos los modelos (User, Grade, Date, Plan, Message, Block, Report y SafetyAlert) con los campos nuevos que tenemos en el plan de la base de datos, porque son la base de todo lo demás. La paginación del servidor pasa a 10 por página: 5 se queda muy corto. Y todo tiene que ir seguro con JSON Web Token: solo el registro y el login (y el refresh y el logout) van sin token, y la protección se pone en las rutas, como le gusta al profesor. [...] Las cosas se hacen por feats: una rama por grupo de tareas, como en el Mínimo 1, y un commit por tarea. Dime el plan de acción.» Después de ver el plan y los ajustes que proponía Claude, lo aprobamos tal cual («procede»), le dimos permiso para rehacer el seed y la base de datos local, y le pedimos que, si salía alguna incompatibilidad que no hubiéramos tenido en cuenta, la dejara bien resuelta pensando en el futuro.
+- **Incoherencias:**
+  - El plan hablaba del rol "student", pero el backend y el plan de la base de datos usan `user` y `admin`.
+  - El plan decía que el refresh leyera la cookie y, si no había, el body. Un teléfono también guarda cookies: con ese orden, la cookie de una sesión anterior podía renovar la cuenta equivocada.
+  - Los contactos de confianza son datos de terceras personas y habrían salido en todos los listados de usuarios.
+  - Al eliminar un usuario para siempre se borraban sus Dates, pero no los Planes de esos Dates, que se quedaban huérfanos. Venía del Mínimo 1.
+  - Los modelos nuevos todavía no tienen rutas, así que el servidor no los importa: sin hacer nada, sus colecciones y sus índices no se habrían creado.
+- **Solución:**
+  - El rol sigue siendo `user`; "estudiante" es solo el nombre que se verá en pantalla.
+  - `CORS_ORIGINS` con una lista de orígenes, y `REFRESH_COOKIE_PATH` y `COOKIE_SECURE` para la cookie. Con la cabecera `X-Client: movil`, el login devuelve el refresh token en el JSON y no pone cookie; en `/auth/refresh` manda el body sobre la cookie. La web no cambia.
+  - `Message`, `Block`, `Report` y `SafetyAlert` con sus índices y sus esquemas de Joi. `trustedContacts` con `select: false`. `Date` con `startedAt`, `closedAt`, `closedReason` e `history`, que empieza con la entrada `pending` al abrirse.
+  - Paginación de 10 con una sola constante (`PAGE_SIZE`).
+  - Un `fix` aparte para el borrado: con cada Date se borran su Plan y sus mensajes, y con el usuario, sus bloqueos, partes y alertas.
+  - El seed importa los modelos nuevos, espera a sus índices con `init()` y crea datos de ejemplo de todo. Swagger documenta los esquemas nuevos y los dos modos del refresh.
+
+### 2. Primer despliegue en Docker: la imagen de la API (`feat/docker`)
+
+- **Pregunta:** cómo meter la API en una imagen de Docker que sirva igual en local y en el servidor, a partir del Seminario 10.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Con la estructura hecha y el login funcionando, toca el primer despliegue en Docker (bloque 2 del plan, de la 16 a la 19). Lo hacemos ya, con poco dentro, para ver si hay problemas con el servidor y no dejarlo para el final. Se hace como en el Seminario 10: te paso los repos del seminario y los datos del servidor. La conexión tiene que ir por HTTPS. A simple vista, con lo que tenemos del Seminario 10 ya tendríamos todo; si consideras que falta algo, me lo comentas. La contraseña no se escribe en ningún sitio. Hace falta el Dockerfile de la API, el de la web servida con nginx y el docker compose con MongoDB, la API y la web en el repo de despliegue. Primero que funcione en local y después en el servidor, y al final probar desde fuera que se puede iniciar sesión. Dime el plan de acción.» Después del análisis del Seminario 10: «Continúa con la parte local» mientras se consiguen los datos del servidor.
+- **Incoherencias:**
+  - En el Seminario 10 el seed no va en la imagen porque se ejecuta con `tsx` (dependencia de desarrollo): para llenar la base de datos del servidor hay que tener el código allí.
+  - Al arrancar, `server.ts` no termina el proceso si MongoDB no responde: el contenedor se quedaría vivo sin servidor. Con el `healthcheck` de MongoDB en el compose y los 30 segundos de reintento de Mongoose no llega a pasar, así que no se ha tocado.
+- **Solución:**
+  - `Dockerfile` en dos etapas con `node:24-alpine`: la primera compila y la segunda se queda con `build/` y las dependencias de producción, sin código fuente ni `.env`, y corre como el usuario `node`. `.dockerignore` deja fuera `node_modules`, `build`, `.git` y cualquier `.env`.
+  - El seed se compila con el resto (`build/seed.js`) y se ejecuta dentro del contenedor con `node`, sin `tsx`.
+  - Un workflow de GitHub Actions pasa lint y build y publica la imagen en ghcr.io (`latest` desde `main`, `develop` desde `develop`).
+  - Probado en local: `docker build`, el seed contra un MongoDB en una red de Docker sin puerto público, y el login con la cookie en `/api/auth` (la ruta que tendrá detrás de nginx).
+
+### 3. La Orla del estudiante (`feat/orla`)
+
+- **Pregunta:** cómo montar La Orla en el backend: el siguiente Expediente, votar con el A+ mutuo que abre el Date, el cupo de 30 A+ al día y deshacer en 10 segundos.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Ahora la pantalla principal de Studate, La Orla (bloque 3 del plan, de la 20 a la 25). Recuerda que esto es como un Tinder, pero para estudiantes: te sale el Expediente de alguien y le pones A+ o F. Primero el backend: el siguiente perfil (que no sea yo, que no lo haya votado y sin bloqueos entre los dos), votar, el A+ mutuo que abre el Date, el cupo de 30 A+ al día y deshacer en 10 segundos. Todo con JSON Web Token, como el resto. [...] Dime el plan de acción.» Tras ver el plan, Diego lo aprobó para proceder con el backend.
+- **Incoherencias:**
+  - El `/grades` que ya existía es el CRUD del backoffice (solo admin). La Orla es el flujo del estudiante y necesita otras reglas (el `from` del token, el cupo, el bloqueo), así que no encajaba en `/grades`.
+  - `GradeService.createGrade` ya abría el Date, pero descarta el Date que devuelve y acepta usuarios inactivos (el admin puede). La Orla necesita el Date en la respuesta y solo estudiantes activos.
+- **Solución:**
+  - Un router nuevo `/orla` (rol `user`) con `OrlaService`: `getNext` (excluye al propio usuario, a los ya votados y a los bloqueados en los dos sentidos, y añade el cupo restante), `vote` (reutiliza `openDateIfMutual` y devuelve el Date) y `undo`.
+  - Cupo de 30 A+ por día natural con el índice `(from, value, createdAt)` en Grade; las F no cuentan. Deshacer solo un voto propio de menos de 10 s, borrando también el Date que ese A+ hubiera abierto.
+  - Joi del body del voto, Swagger con el tag Orla, y 23 pruebas con `fetch` contra la API local, todas en verde.
+
+### 4. Mi perfil (`feat/perfil`)
+
+- **Pregunta:** cómo dejar que el estudiante edite su perfil, su foto y sus contactos de confianza sin poder cambiarse el rol.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Ahora Mi perfil (bloque 4 del plan, de la 26 a la 28). Es lo mismo que en cualquier web que tiene un "mi perfil": tu zona de ajustes, pero personales. El estudiante edita su Expediente y su foto, pero no puede cambiarse el rol. Recuerda que de momento solo existen dos roles, administrador y estudiante; nada más por ahora. Aquí van también los contactos de confianza, y tienen que ser opcionales: no hay que obligar a nadie a ponerlos. Mismo estilo visual y mismo CSS global que el resto. Primero el backend y después la web. Dime el plan de acción.»
+- **Incoherencias:**
+  - `GET /users/me` solo devolvía `_id`, `name`, `email` y `role`: no servía para rellenar la pantalla de Mi perfil.
+  - Los contactos de confianza tienen `select: false` (son datos de terceras personas): había que decidir dónde se ven. Solo en `GET /users/me`, para su dueño.
+  - `VerifyToken` consulta el usuario en cada petición: no conviene cargarle el perfil entero y los contactos cada vez.
+- **Solución:**
+  - `getMe` (perfil completo con `+trustedContacts`) separado de `getUserById` (ligero, el de `VerifyToken`). `PUT /users/me` con `updateMe` y `findOneAndUpdate` con `runValidators`.
+  - El esquema `user.updateMe` reutiliza los campos del perfil y deja fuera `email`, `role` y `active`: enviar `role: 'admin'` responde 422. Los contactos, como lista opcional de hasta 3 (`[]` los quita).
+  - Swagger con `MyProfileInput` y la ruta PUT documentada; contrato y bitácora en LOGS.
+
+### 5. Mis Dates y chat (`feat/chat`)
+
+- **Pregunta:** cómo montar el chat de los Dates en tiempo real con socket.io, con el JWT también en el socket, y que todo quede registrado: los mensajes y cada cambio de estado del Date, con quién y cuándo.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Toca montar lo de las citas: Mis Dates y el chat (bloque 5 del plan, de la 29 a la 33). Aquí es donde volvemos a usar socket.io, y como es un chat, tiene que ser en tiempo real. Usa bien JSON Web Token también en el socket: sin token no se conecta nadie. Usa los modelos nuevos que ya creamos en la estructura, adaptados a lo que queremos montar. Y todo tiene que quedar bien registrado con su historial: los mensajes y los movimientos de cada Date, es decir, cada cambio de estado con quién lo hizo y cuándo. Primero el backend y después la web, con el estilo y el CSS global de siempre. Dime el plan de acción.» Diego pidió que se hicieran todos los bloques seguidos sin parar en cada uno, preguntando solo si surgía algo.
+- **Incoherencias:**
+  - El chat del Seminario 10 tiene salas con nombre (`general`, `group:`, `direct:`) y el historial va por el propio socket. En Studate la sala es el Date y el historial tiene que ser paginado, así que el historial va por HTTP y el socket solo lleva lo que pasa ahora.
+  - El middleware del socket del seminario rechaza todo con un `Authentication error` genérico; con eso el frontend no sabe si le basta con renovar el token.
+  - `POST /dates` y `PUT /dates/:dateId` dejaban a un estudiante abrir y cambiar Dates a mano, y `updateStatus` cambiaba el estado sin apuntar nada en el `history`. El plan dice "estados automáticos y sin Dates a mano".
+  - El cierre por caducidad estaba previsto en el modelo (índice `(status, expiresAt)` y `closedReason: 'expired'`) pero nadie lo ejecutaba.
+  - La prórroga no es un cambio de estado, pero sí un movimiento del Date que hay que registrar.
+- **Solución:**
+  - `VerifySocketToken` lee el token del handshake y responde con los mismos mensajes que el 401 de la API; comprueba también que el usuario siga activo, como `VerifyToken`.
+  - `ChatService` con las reglas (solo los dos del Date, turno de `firstTurn` mientras está pendiente, nada en un Date cerrado) y `sockets/Chat.ts` con los eventos `date:join`, `date:message`, `date:read`, `date:updated` y `chat:error`; el texto se valida con el mismo Joi que una ruta.
+  - `GET /dates/:dateId/messages` paginado (página 1, los más nuevos). `POST` y `PUT /dates` solo admin; `updateStatus`, `extendDate`, el primer mensaje y el cierre por caducidad escriben en el `history` con `by`, `reason` y `at`. `jobs/ExpireDates.ts` cierra los pendientes caducados cada minuto y avisa a la sala.
+  - README con la tabla de eventos del socket, contrato en LOGS y 56 comprobaciones con `fetch` y `socket.io-client`.
+
+### 6. Seguridad (`feat/seguridad`)
+
+- **Pregunta:** cómo montar la conciencia digital en el backend: bloquear, mandar un parte al admin y el botón de ayuda con los contactos de confianza opcionales.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Ahora las funcionalidades de conciencia digital, la seguridad (bloque 6 del plan, de la 34 a la 38). Bloquear: si alguien te da mala espina, lo bloqueas y ya no vuelve a aparecer, ni en La Orla ni en los chats. Reportar: de momento el parte va al administrador, y el administrador, según la gravedad, ya verá cómo actuar. A futuro esto se podría automatizar o conectar con otros sistemas, como la policía, pero ahí hay que ir con mucho cuidado; de momento, solo al administrador. Y el botón de ayuda con los contactos de confianza, que son opcionales: no se obliga a nadie a tenerlos, y si no hay, el aviso llega igualmente a los administradores. Primero el backend y después la web. Dime el plan de acción.» Diego pidió que se hicieran todos los bloques seguidos sin parar en cada uno, preguntando solo si surgía algo.
+- **Incoherencias:**
+  - "Ya no vuelve a aparecer en los chats" no está resuelto con solo guardar el bloqueo: el Date que tienen los dos seguiría abierto. Se decidió que bloquear cierra el Date (`closedReason: 'blocked'`, que el modelo ya tenía previsto) y que desbloquear no lo reabre.
+  - Un parte o una alerta pueden llevar el Date desde el que se mandan; si no se comprueba, cualquiera podría colgarlos de un Date ajeno.
+  - "Avisar a los contactos de confianza" no tiene un servicio de correo real en el proyecto: se simula en el log del servidor, como ya hacía el email de bienvenida.
+  - Los admin tienen que recibir la alerta "al momento": hacía falta una sala del socket solo para ellos, que no existía.
+- **Solución:**
+  - `BlockService` (bloquear cierra el Date y avisa a su sala; desbloquear; `isBlockedBetween`), `ReportService` (crear con el Date comprobado, listar con filtros, revisar con gravedad, resolución, quién y cuándo) y `SafetyAlertService` (crear con el Date o Plan comprobado, avisar a los contactos, listar, atender).
+  - Sala `admins` en el socket: los sockets con rol `admin` entran al conectar y reciben `alert:new` y `alert:updated` (`emitToAdmins`).
+  - Rutas `/blocks`, `/reports` y `/alerts` con sus roles (mandar es del estudiante, ver y revisar del admin), Joi para los filtros nuevos, Swagger con tres tags, contrato en LOGS y 43 comprobaciones con `fetch` y `socket.io-client`.
+
+### 7. Cierre y documentación (`feat/documentacion`)
+
+- **Pregunta:** cómo dejar el repo listo para la entrega: GitHub Actions, LOGS y README al día, el diagrama de clases y el flujo de arquitectura.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Ya toca el segundo despliegue y el cierre (bloque 9 del plan, de la 49 a la 54). Subimos la última versión al servidor y la probamos de punta a punta, en la web y en el móvil. También hay que hacer lo de GitHub Actions, con el lint, el build y los tests en cada push, en el backend y en el frontend. Y dejar todo al día: LOGS y README, el diagrama de clases, el flujo de arquitectura, y el GitHub Project y las horas. Dime el plan de acción.»
+- **Incoherencias:**
+  - El plan pide "tests en cada push" en el backend, pero el backend no tiene tests automáticos (se decidió en el Sprint 1 probar con curl y apuntarlo en la bitácora): el workflow pasa lint y build, y los tests van en el del frontend, que sí los tiene.
+  - El diagrama de clases del equipo incluye los modelos previstos para el Sprint 3 y la entrega final (`Session`, `Place`, `University`), que no están en el código: se deja así, agrupado por sprints, y el README lo explica.
+  - El despliegue de verdad depende del puerto que reenvía el proxy de la UPC a la máquina, que todavía no se sabe: se deja preparado y documentado, y se hace cuando se sepa.
+- **Solución:**
+  - Los workflows ya estaban desde el bloque de Docker; se revisan y se documenta qué pasa cada uno.
+  - `docs/diagrama-bd.svg` en el repo, comprobado contra `src/models/`, y una sección del README que lo explica.
+  - El flujo de arquitectura, en el README del repo de despliegue, enlazado desde aquí. LOGS y README repasados contra el código.

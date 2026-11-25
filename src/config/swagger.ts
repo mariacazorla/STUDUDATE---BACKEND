@@ -2,7 +2,11 @@ import path from 'node:path';
 import swaggerJsdoc from 'swagger-jsdoc';
 import j2s from 'joi-to-swagger';
 import { Schemas } from '../middleware/Joi';
+import { DATE_CLOSED_REASONS, DATE_STATUSES } from '../models/Date';
 import { PLAN_STATUSES } from '../models/Plan';
+import { REPORT_REASONS, REPORT_SEVERITIES, REPORT_STATUSES } from '../models/Report';
+import { ALERT_STATUSES, ALERT_TYPES } from '../models/SafetyAlert';
+import { MAX_TRUSTED_CONTACTS } from '../models/User';
 import { config } from './config';
 
 // La documentación de cada endpoint está escrita en un comentario /** @openapi */
@@ -12,14 +16,23 @@ import { config } from './config';
 // peticiones, así que no se pueden quedar desfasados.
 const { swagger: registerInput } = j2s(Schemas.auth.register);
 const { swagger: loginInput } = j2s(Schemas.auth.login);
+const { swagger: refreshInput } = j2s(Schemas.auth.refresh);
 const { swagger: userInput } = j2s(Schemas.user.create);
 const { swagger: userUpdateInput } = j2s(Schemas.user.update);
+const { swagger: myProfileInput } = j2s(Schemas.user.updateMe);
 const { swagger: gradeInput } = j2s(Schemas.grade.create);
 const { swagger: gradeUpdateInput } = j2s(Schemas.grade.update);
+const { swagger: orlaVoteInput } = j2s(Schemas.orla.vote);
 const { swagger: dateInput } = j2s(Schemas.date.create);
 const { swagger: dateUpdateInput } = j2s(Schemas.date.update);
 const { swagger: planInput } = j2s(Schemas.plan.create);
 const { swagger: planUpdateInput } = j2s(Schemas.plan.update);
+const { swagger: messageInput } = j2s(Schemas.message.create);
+const { swagger: blockInput } = j2s(Schemas.block.create);
+const { swagger: reportInput } = j2s(Schemas.report.create);
+const { swagger: reportReviewInput } = j2s(Schemas.report.review);
+const { swagger: safetyAlertInput } = j2s(Schemas.safetyAlert.create);
+const { swagger: safetyAlertAttendInput } = j2s(Schemas.safetyAlert.attend);
 
 // Lo que devuelve la API no es igual a lo que se envía: lleva el _id y las fechas que
 // pone MongoDB, y el usuario nunca devuelve la contraseña.
@@ -48,6 +61,19 @@ const userSchema = {
         deleted: { type: 'boolean', description: 'true si el usuario está archivado' },
         deletedAt: { type: 'string', format: 'date-time' }
     }
+};
+
+// Un contacto de confianza. Son datos privados: no van dentro del usuario en ninguna respuesta normal
+// (select: false en el modelo), solo donde se pidan a propósito
+const trustedContactSchema = {
+    type: 'object',
+    description: `Contacto de confianza para el botón de ayuda. Opcionales, ${MAX_TRUSTED_CONTACTS} como mucho por usuario`,
+    properties: {
+        name: { type: 'string', maxLength: 100, example: 'Marta Puig (hermana)' },
+        email: { type: 'string', format: 'email', example: 'marta.puig@example.com' },
+        phone: { type: 'string', maxLength: 20, example: '600 111 222' }
+    },
+    required: ['name', 'email']
 };
 
 // Una respuesta correcta: el esquema de lo que se devuelve y un ejemplo con datos de verdad
@@ -110,16 +136,31 @@ const gradeExample = {
     updatedAt: '2026-11-03T10:00:00.000Z'
 };
 
+// Una entrada del historial de un Date: un cambio de estado, quién lo hizo y cuándo
+const dateEventSchema = {
+    type: 'object',
+    properties: {
+        status: { type: 'string', enum: [...DATE_STATUSES], description: 'El estado al que pasó el Date' },
+        by: { type: 'string', description: 'Id de quien hizo el cambio. Si no viene, lo hizo el servidor' },
+        reason: { type: 'string', maxLength: 200 },
+        at: { type: 'string', format: 'date-time' }
+    }
+};
+
 // Un Date: users llega con los datos de los dos usuarios; firstTurn es el id del que escribe primero
 const dateSchema = {
     type: 'object',
     properties: {
         ...storedFields,
         users: { type: 'array', items: userSummary },
-        status: { type: 'string', enum: ['pending', 'ongoing', 'closed'] },
+        status: { type: 'string', enum: [...DATE_STATUSES] },
         firstTurn: { type: 'string', description: 'Id del usuario al que le toca escribir primero' },
         expiresAt: { type: 'string', format: 'date-time' },
-        extended: { type: 'boolean', description: 'Si ya se ha usado la prórroga' }
+        extended: { type: 'boolean', description: 'Si ya se ha usado la prórroga' },
+        startedAt: { type: 'string', format: 'date-time', description: 'Cuándo pasó a En curso (el primer mensaje)' },
+        closedAt: { type: 'string', format: 'date-time' },
+        closedReason: { type: 'string', enum: [...DATE_CLOSED_REASONS], description: 'Por qué se cerró' },
+        history: { type: 'array', items: dateEventSchema, description: 'Cada cambio de estado, del más antiguo al más nuevo' }
     }
 };
 
@@ -130,6 +171,7 @@ const dateExample = {
     firstTurn: '6ab3f2fe9c500204a7d5f8a4',
     expiresAt: '2026-11-04T10:00:00.000Z',
     extended: false,
+    history: [{ status: 'pending', reason: 'A+ mutuo', at: '2026-11-03T10:00:00.000Z' }],
     createdAt: '2026-11-03T10:00:00.000Z',
     updatedAt: '2026-11-03T10:00:00.000Z'
 };
@@ -156,7 +198,7 @@ const planSchema = {
             properties: {
                 _id: { type: 'string' },
                 users: { type: 'array', items: userSummary },
-                status: { type: 'string', enum: ['pending', 'ongoing', 'closed'] },
+                status: { type: 'string', enum: [...DATE_STATUSES] },
                 expiresAt: { type: 'string', format: 'date-time' }
             }
         },
@@ -186,6 +228,105 @@ const planExample = {
     updatedAt: '2026-11-05T10:00:00.000Z'
 };
 
+// ---- Modelos del Sprint 2 ----
+
+// Un mensaje del chat de un Date. Los nuevos viajan por socket.io (evento date:message); el historial se
+// lee con GET /dates/{dateId}/messages
+const messageSchema = {
+    type: 'object',
+    properties: {
+        _id: storedFields._id,
+        date: { type: 'string', description: 'Id del Date (la sala del chat)' },
+        from: { type: 'string', description: 'Id de quien lo ha escrito' },
+        text: { type: 'string', maxLength: 1000 },
+        readAt: { type: 'string', format: 'date-time', description: 'Cuándo lo leyó la otra persona' },
+        createdAt: storedFields.createdAt
+    }
+};
+
+const messageExample = {
+    _id: '6ab3f2fe9c500204a7d5fd01',
+    date: dateExample._id,
+    from: gradeExample.to._id,
+    text: '¡Hola! Me ha tocado empezar a mí. ¿Qué tal los parciales?',
+    createdAt: '2026-11-03T12:00:00.000Z'
+};
+
+// Un bloqueo: quién bloquea y a quién. En GET /blocks, blocked llega con los datos de la persona
+const blockSchema = {
+    type: 'object',
+    properties: {
+        _id: storedFields._id,
+        blocker: { type: 'string', description: 'Id de quien bloquea' },
+        blocked: { type: 'string', description: 'Id del usuario bloqueado (en GET /blocks, { _id, name, degree?, photo? })' },
+        createdAt: storedFields.createdAt
+    }
+};
+
+const blockExample = {
+    _id: '6ab3f2fe9c500204a7d5fe01',
+    blocker: gradeExample.from._id,
+    blocked: gradeExample.to._id,
+    createdAt: '2026-11-03T12:30:00.000Z'
+};
+
+// Un parte sobre un usuario. Solo lo ve el admin, que le pone la gravedad y anota lo que ha hecho
+const reportSchema = {
+    type: 'object',
+    properties: {
+        ...storedFields,
+        reporter: userSummary,
+        reported: userSummary,
+        date: { type: 'string', description: 'Id del Date, si el parte se mandó desde un chat' },
+        reason: { type: 'string', enum: [...REPORT_REASONS] },
+        text: { type: 'string', maxLength: 500 },
+        status: { type: 'string', enum: [...REPORT_STATUSES] },
+        severity: { type: 'string', enum: [...REPORT_SEVERITIES], description: 'La pone el admin al revisarlo' },
+        resolution: { type: 'string', maxLength: 500, description: 'Lo que ha hecho el admin' },
+        reviewedBy: { type: 'string', description: 'Id del admin que lo revisó' },
+        reviewedAt: { type: 'string', format: 'date-time' }
+    }
+};
+
+const reportExample = {
+    _id: '6ab3f2fe9c500204a7d5ff01',
+    reporter: gradeExample.from,
+    reported: gradeExample.to,
+    date: dateExample._id,
+    reason: 'inappropriate',
+    text: 'Me ha escrito cosas fuera de lugar nada más abrir el chat.',
+    status: 'open',
+    createdAt: '2026-11-03T13:00:00.000Z',
+    updatedAt: '2026-11-03T13:00:00.000Z'
+};
+
+// Una alerta del botón de ayuda. Queda guardado qué admin la atendió y cuándo
+const safetyAlertSchema = {
+    type: 'object',
+    properties: {
+        ...storedFields,
+        user: userSummary,
+        date: { type: 'string', description: 'Id del Date desde el que se pidió ayuda' },
+        plan: { type: 'string', description: 'Id del Plan desde el que se pidió ayuda' },
+        type: { type: 'string', enum: [...ALERT_TYPES] },
+        message: { type: 'string', maxLength: 300 },
+        status: { type: 'string', enum: [...ALERT_STATUSES] },
+        attendedBy: { type: 'string', description: 'Id del admin que la atendió' },
+        attendedAt: { type: 'string', format: 'date-time' }
+    }
+};
+
+const alertExample = {
+    _id: '6ab3f2fe9c500204a7d5ff81',
+    user: gradeExample.from,
+    date: dateExample._id,
+    type: 'sos',
+    message: 'Me siento incómoda, ¿podéis llamarme?',
+    status: 'open',
+    createdAt: '2026-11-03T20:10:00.000Z',
+    updatedAt: '2026-11-03T20:10:00.000Z'
+};
+
 const swaggerPath = (filePath: string) => filePath.replace(/\\/g, '/');
 
 const swaggerDocument = swaggerJsdoc({
@@ -202,8 +343,20 @@ const swaggerDocument = swaggerJsdoc({
             { name: 'Auth', description: 'Registro, login, renovación del token y logout' },
             { name: 'Users', description: 'Usuarios: el de la sesión, con quién abrir un Date y la gestión de usuarios del backoffice (solo admin)' },
             { name: 'Grades', description: 'Votos de La Orla: A+ o F de un usuario a otro (solo admin)' },
-            { name: 'Dates', description: 'Citas entre dos usuarios que se han dado A+ (el admin ve todas; un usuario, las suyas)' },
-            { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' }
+            { name: 'Orla', description: 'La Orla del estudiante: siguiente Expediente, votar, cupo del día y deshacer' },
+            {
+                name: 'Dates',
+                description:
+                    'Citas entre dos usuarios que se han dado A+ (el admin ve todas; un usuario, las suyas) y el historial de su chat. Los mensajes en tiempo real van por socket.io (eventos date:join, date:message, date:read, date:updated), con el mismo token en el handshake'
+            },
+            { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' },
+            { name: 'Blocks', description: 'Bloqueos del estudiante: a quién no quiere volver a ver (ni en La Orla ni en los chats)' },
+            { name: 'Reports', description: 'Partes: el estudiante los manda y solo el admin los ve y los revisa, con su gravedad' },
+            {
+                name: 'Alerts',
+                description:
+                    'El botón de ayuda: el estudiante pide ayuda y los admin la reciben al momento (socket, eventos alert:new y alert:updated) y la atienden'
+            }
         ],
         // Por defecto todas las rutas piden el token (el candado de Swagger).
         // Las rutas públicas lo quitan con security: [] en su comentario @openapi.
@@ -215,31 +368,48 @@ const swaggerDocument = swaggerJsdoc({
                 bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
                 // El refresh token va en una cookie HttpOnly que deja el login; la usan /auth/refresh y /auth/logout.
                 // Desde la propia página de Swagger funciona sola, porque el navegador la envía.
+                // La app del móvil no usa la cookie: manda el refresh token en el body de /auth/refresh.
                 refreshCookie: { type: 'apiKey', in: 'cookie', name: 'refreshToken' }
             },
             schemas: {
                 RegisterInput: registerInput,
                 LoginInput: loginInput,
+                RefreshInput: refreshInput,
                 UserInput: userInput,
                 UserUpdateInput: userUpdateInput,
+                MyProfileInput: myProfileInput,
                 User: userSchema,
                 GradeInput: gradeInput,
                 GradeUpdateInput: gradeUpdateInput,
+                OrlaVoteInput: orlaVoteInput,
                 Grade: gradeSchema,
                 DateInput: dateInput,
                 DateUpdateInput: dateUpdateInput,
                 Date: dateSchema,
                 PlanInput: planInput,
                 PlanUpdateInput: planUpdateInput,
-                Plan: planSchema
+                Plan: planSchema,
+                TrustedContact: trustedContactSchema,
+                DateEvent: dateEventSchema,
+                MessageInput: messageInput,
+                Message: messageSchema,
+                BlockInput: blockInput,
+                Block: blockSchema,
+                ReportInput: reportInput,
+                ReportReviewInput: reportReviewInput,
+                Report: reportSchema,
+                SafetyAlertInput: safetyAlertInput,
+                SafetyAlertAttendInput: safetyAlertAttendInput,
+                SafetyAlert: safetyAlertSchema
             },
             responses: {
                 LoginOk: okResponse(
-                    'Sesión iniciada: el access token y el usuario (el refresh token va en la cookie)',
+                    'Sesión iniciada: el access token y el usuario. El refresh token va en la cookie; solo con X-Client: movil va en el JSON',
                     {
                         type: 'object',
                         properties: {
                             token: { type: 'string' },
+                            refreshToken: { type: 'string', description: 'Solo si la petición lleva X-Client: movil' },
                             user: userSchema
                         }
                     },
@@ -260,10 +430,10 @@ const swaggerDocument = swaggerJsdoc({
                             grades: { type: 'array', items: gradeSchema },
                             total: { type: 'integer', example: 25 },
                             page: { type: 'integer', example: 1 },
-                            pages: { type: 'integer', example: 5 }
+                            pages: { type: 'integer', example: 3 }
                         }
                     },
-                    { grades: [gradeExample], total: 25, page: 1, pages: 5 }
+                    { grades: [gradeExample], total: 25, page: 1, pages: 3 }
                 ),
                 DateOne: okResponse('Un Date, con los datos de los dos usuarios', { type: 'object', properties: { date: dateSchema } }, { date: dateExample }),
                 DateList: okResponse(
@@ -296,10 +466,66 @@ const swaggerDocument = swaggerJsdoc({
                 PlanConflict: errorResponse('El Date está cerrado o ya tiene un Plan (también si está archivado)', 'Este Date ya tiene un Plan'),
                 PlanArchived: errorResponse('El Plan está archivado: hay que restaurarlo antes', 'El Plan está archivado: restáuralo antes de editarlo'),
                 PlanNotArchived: errorResponse('El Plan no está archivado (para eliminarlo, primero se archiva)', 'Archiva el Plan antes de eliminarlo'),
-                AlreadyExtended: errorResponse('La prórroga solo se puede usar una vez', 'La prórroga de este Date ya se ha usado'),
+                AlreadyExtended: errorResponse('La prórroga solo se puede usar una vez, y no en un Date cerrado ("Este Date está cerrado")', 'La prórroga de este Date ya se ha usado'),
                 GradeConflict: errorResponse('Ese usuario ya ha votado ese perfil (para cambiar la nota, PUT)', 'Este usuario ya ha votado ese perfil'),
                 DateConflict: errorResponse('Ya hay un Date entre esos dos usuarios', 'Ya hay un Date entre estos dos usuarios'),
-                NotYourDate: errorResponse('Un usuario normal solo puede abrir Dates en los que está él', 'Solo puedes abrir Dates en los que estés tú'),
+                MessageList: okResponse(
+                    'Una página del chat de un Date (la página 1, los más nuevos) y los datos de paginación',
+                    {
+                        type: 'object',
+                        properties: {
+                            messages: { type: 'array', items: messageSchema },
+                            total: { type: 'integer', example: 4 },
+                            page: { type: 'integer', example: 1 },
+                            pages: { type: 'integer', example: 1 }
+                        }
+                    },
+                    { messages: [messageExample], total: 4, page: 1, pages: 1 }
+                ),
+                BlockOne: okResponse(
+                    'El bloqueo creado y el Date que se ha cerrado con él (null si no había)',
+                    { type: 'object', properties: { block: blockSchema, date: { ...dateSchema, nullable: true } } },
+                    { block: blockExample, date: null }
+                ),
+                BlockList: okResponse(
+                    'Mis bloqueos, con los datos de cada persona bloqueada',
+                    { type: 'object', properties: { blocks: { type: 'array', items: blockSchema } } },
+                    { blocks: [blockExample] }
+                ),
+                ReportOne: okResponse('Un parte, con los datos de los dos usuarios', { type: 'object', properties: { report: reportSchema } }, { report: reportExample }),
+                ReportList: okResponse(
+                    'Una página de partes y los datos de paginación',
+                    {
+                        type: 'object',
+                        properties: {
+                            reports: { type: 'array', items: reportSchema },
+                            total: { type: 'integer', example: 2 },
+                            page: { type: 'integer', example: 1 },
+                            pages: { type: 'integer', example: 1 }
+                        }
+                    },
+                    { reports: [reportExample], total: 2, page: 1, pages: 1 }
+                ),
+                AlertOne: okResponse('Una alerta, con los datos de quien pide ayuda', { type: 'object', properties: { alert: safetyAlertSchema } }, { alert: alertExample }),
+                AlertCreated: okResponse(
+                    'La alerta creada y a cuántos contactos de confianza se ha avisado (0 si no tiene)',
+                    { type: 'object', properties: { alert: safetyAlertSchema, contactsNotified: { type: 'integer' } } },
+                    { alert: alertExample, contactsNotified: 2 }
+                ),
+                AlertList: okResponse(
+                    'Una página de alertas y los datos de paginación',
+                    {
+                        type: 'object',
+                        properties: {
+                            alerts: { type: 'array', items: safetyAlertSchema },
+                            total: { type: 'integer', example: 2 },
+                            page: { type: 'integer', example: 1 },
+                            pages: { type: 'integer', example: 1 }
+                        }
+                    },
+                    { alerts: [alertExample], total: 2, page: 1, pages: 1 }
+                ),
+                AlreadyBlocked: errorResponse('Ya había un bloqueo a esa persona', 'Ya tienes bloqueada a esta persona'),
                 NotArchived: errorResponse('Solo se puede eliminar para siempre un usuario archivado', 'Archiva el usuario antes de eliminarlo'),
                 OwnUser: errorResponse('Un admin no puede hacer esto con su propio usuario', 'No puedes hacer esto con tu propio usuario'),
                 UserOne: okResponse('Un usuario', { type: 'object', properties: { user: userSchema } }, { user: userExample }),

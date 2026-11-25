@@ -13,6 +13,19 @@ export const PHOTO_MAX_LENGTH = 200_000;
 export const USER_ROLES = ['user', 'admin'] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
+// Cuantos contactos de confianza puede tener un usuario como mucho
+export const MAX_TRUSTED_CONTACTS = 3;
+
+// Un contacto de confianza: alguien de fuera de Studate (un amigo, un familiar) al que se avisa si el
+// usuario pulsa el boton de ayuda. Son subdocumentos del usuario
+export interface ITrustedContact {
+    name: string;
+
+    email: string;
+
+    phone?: string;
+}
+
 // Definimos los datos que puede tener un usuario.
 // Un usuario es quien inicia sesion en la aplicacion: un estudiante de la universidad o un admin.
 export interface IUser {
@@ -40,6 +53,9 @@ export interface IUser {
 
     // Foto de perfil en base64 (ver PHOTO_MAX_LENGTH)
     photo?: string;
+
+    // Contactos de confianza para el boton de ayuda. Son opcionales: nadie esta obligado a ponerlos
+    trustedContacts?: ITrustedContact[];
 
     // ---- Estado de la cuenta ----
 
@@ -80,6 +96,20 @@ export interface AuthUser {
 // Esta interfaz junta los datos del usuario con las propiedades de un documento de MongoDB
 export interface IUserModel extends IUser, Document {}
 
+// Esquema de cada contacto de confianza. Con _id: false Mongoose no le pone un _id a cada uno: la lista
+// se guarda y se envia entera, asi que no hace falta, y el frontend puede devolverla tal cual sin que
+// Joi la rechace por llevar un campo de mas
+const TrustedContactSchema = new Schema<ITrustedContact>(
+    {
+        name: { type: String, required: true, trim: true, maxlength: 100 },
+
+        email: { type: String, required: true, lowercase: true, trim: true },
+
+        phone: { type: String, trim: true, maxlength: 20 }
+    },
+    { _id: false }
+);
+
 const UserSchema: Schema = new Schema(
     {
         // El nombre es el que se ve en la aplicacion (por ejemplo, en La Orla o en un Date)
@@ -106,6 +136,18 @@ const UserSchema: Schema = new Schema(
         bio: { type: String, trim: true, maxlength: 500 },
 
         photo: { type: String, maxlength: PHOTO_MAX_LENGTH },
+
+        // Los contactos de confianza son datos privados, y ademas de terceras personas que no usan Studate.
+        // Con select: false no salen en ninguna consulta (ni en La Orla, ni en los listados, ni en el login),
+        // igual que la contraseña: para leerlos hay que pedirlos a proposito con .select('+trustedContacts')
+        trustedContacts: {
+            type: [TrustedContactSchema],
+            select: false,
+            validate: {
+                validator: (contacts: ITrustedContact[]) => contacts.length <= MAX_TRUSTED_CONTACTS,
+                message: `Como mucho ${MAX_TRUSTED_CONTACTS} contactos de confianza`
+            }
+        },
 
         // Por defecto un usuario esta activo
         active: { type: Boolean, default: true },

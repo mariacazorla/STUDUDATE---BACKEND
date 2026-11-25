@@ -4,13 +4,19 @@ import http from 'http';
 import mongoose from 'mongoose';
 import { config } from './config/config';
 import { Cors } from './middleware/Cors';
+import { StartExpireDates } from './jobs/ExpireDates';
 import Logging from './library/Logging';
 import Logger from './middleware/Logger';
 import ErrorHandler from './middleware/ErrorHandler';
 import authRoutes from './routes/Auth';
+import blockRoutes from './routes/Block';
 import dateRoutes from './routes/Date';
 import gradeRoutes from './routes/Grade';
+import orlaRoutes from './routes/Orla';
 import planRoutes from './routes/Plan';
+import reportRoutes from './routes/Report';
+import safetyAlertRoutes from './routes/SafetyAlert';
+import { StartChat } from './sockets/Chat';
 import swaggerUi from 'swagger-ui-express'; // permite mostrar Swagger en el navegador.
 import swaggerDocument from './config/swagger'; // importa el documento que hemos creado en swagger.ts
 import userRoutes from './routes/Users';
@@ -45,8 +51,12 @@ const StartServer = () => {
     router.use('/auth', authRoutes);
     router.use('/users', userRoutes);
     router.use('/grades', gradeRoutes);
+    router.use('/orla', orlaRoutes);
     router.use('/dates', dateRoutes);
     router.use('/plans', planRoutes);
+    router.use('/blocks', blockRoutes);
+    router.use('/reports', reportRoutes);
+    router.use('/alerts', safetyAlertRoutes);
 
     // La documentacion y el healthcheck son publicos
     router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -75,8 +85,15 @@ const StartServer = () => {
 
     router.use(ErrorHandler);
 
-    // Creamos el servidor HTTP con Express y lo ponemos a escuchar en el puerto del .env
+    // Creamos el servidor HTTP con Express y lo ponemos a escuchar en el puerto del .env.
+    // Express y socket.io comparten este mismo servidor (y el mismo puerto)
     const server = http.createServer(router);
+
+    /** Chat (socket.io) */
+    StartChat(server);
+
+    /** Cierre de los Dates caducados, cada minuto */
+    StartExpireDates();
 
     server.listen(config.server.port, () => Logging.info(`Server is running on port ${config.server.port}`));
 };

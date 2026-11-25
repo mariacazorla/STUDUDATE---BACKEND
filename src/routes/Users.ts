@@ -22,14 +22,31 @@ const router = express.Router();
  *         description: El usuario con sesión
  *         content:
  *           application/json:
- *             example: { user: { _id: 6ab3f2fe9c500204a7d5f8a1, name: Admin Studate, email: admin@example.com, role: admin } }
+ *             example: { user: { _id: 6ab3f2fe9c500204a7d5f8a3, name: Laia Puig, email: laia@example.com, role: user, degree: Grau en Enginyeria Telemàtica, trustedContacts: [{ name: Marta Puig (hermana), email: marta.puig@example.com }] } }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       404: { $ref: '#/components/responses/NotFound' }
+ *   put:
+ *     tags: [Users]
+ *     summary: Edita el perfil del usuario con sesión (Mi perfil)
+ *     description: >
+ *       El estudiante edita su nombre, su perfil, su foto y sus contactos de confianza (opcionales, 3 como mucho).
+ *       Ni el email, ni el rol, ni active: enviarlos responde 422.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/MyProfileInput' }
+ *     responses:
+ *       200: { $ref: '#/components/responses/UserOne' }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       422: { $ref: '#/components/responses/Unprocessable' }
  */
 
-// Devuelve el usuario con sesion a partir de req.user.
-// Va antes que /:userId: si no, Express pensaria que "me" es un id
+// Devuelve y edita el usuario con sesion a partir de req.user.
+// Van antes que /:userId: si no, Express pensaria que "me" es un id
 router.get('/me', VerifyToken, controller.readMe);
+router.put('/me', VerifyToken, ValidateJoi(Schemas.user.updateMe), controller.updateMe);
 
 /**
  * @openapi
@@ -68,7 +85,7 @@ router.get('/directory', VerifyToken, controller.readDirectory);
  *         description: Número de página
  *       - in: query
  *         name: limit
- *         schema: { type: integer, minimum: 1, maximum: 100, default: 5 }
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
  *         description: Número de usuarios por página
  *       - in: query
  *         name: search
@@ -236,7 +253,7 @@ router.post('/:userId/restore', VerifyToken, RequireRole('admin'), ValidateId('u
  *     summary: Elimina un usuario para siempre (borrado físico, backoffice)
  *     description: >
  *       Solo se puede eliminar un usuario archivado (si no, 409). No se puede deshacer: se borran también
- *       sus votos de La Orla y sus Dates. Un admin no puede eliminarse a sí mismo (403).
+ *       sus votos de La Orla, sus Dates (con sus Planes y mensajes), sus bloqueos, sus partes y sus alertas. Un admin no puede eliminarse a sí mismo (403).
  *     parameters:
  *       - in: path
  *         name: userId

@@ -1,7 +1,11 @@
+import Block from '../models/Block';
 import DateModel from '../models/Date';
 import Grade from '../models/Grade';
+import Report from '../models/Report';
+import SafetyAlert from '../models/SafetyAlert';
 import User, { IUser, UserRole } from '../models/User';
 import type { UserListQuery } from '../middleware/Joi';
+import { deleteDateContents } from './DateService';
 import { escapeRegExp } from '../utils/escape-regexp';
 
 // Los datos del usuario con sesion, para GET /users/me. Nunca lleva la contraseña.
@@ -34,6 +38,23 @@ export const getUserById = async (userId: string): Promise<IUserProfile | null> 
     };
 
     return profile;
+};
+
+// Funcion que devuelve el perfil completo del usuario con sesion, para la pantalla Mi perfil: ademas de
+// lo basico, el perfil (titulacion, bio, foto...) y los contactos de confianza, que tienen select: false
+// y hay que pedirlos a proposito. Solo aqui: el resto de la app nunca ve los contactos de nadie
+export const getMe = (userId: string) => {
+    return User.findById(userId).select('+trustedContacts');
+};
+
+// Los campos que un estudiante puede cambiar de su propio perfil. Ni el email (es con lo que entra),
+// ni el rol, ni si esta activo: eso solo lo toca el admin. Joi rechaza cualquier otro campo con 422
+export type MyProfileUpdate = Pick<IUser, 'name' | 'birthDate' | 'degree' | 'lookingFor' | 'bio' | 'photo' | 'trustedContacts'>;
+
+// Funcion que actualiza el perfil del usuario con sesion. Con new: true devuelve el documento ya
+// cambiado, con los contactos de confianza (para que la pantalla los vea tal como han quedado)
+export const updateMe = (userId: string, data: Partial<MyProfileUpdate>) => {
+    return User.findOneAndUpdate({ _id: userId }, data, { new: true, runValidators: true }).select('+trustedContacts');
 };
 
 // Funcion que devuelve la lista de usuarios con los que se puede abrir un Date: los demas usuarios
@@ -127,13 +148,26 @@ export const deleteUser = async (userId: string): Promise<DeleteUserResult> => {
         return 'not-archived';
     }
 
-    // Con el usuario se borran sus votos de La Orla (los que dio y los que recibio) y sus Dates: si no,
-    // quedarian datos que apuntan a un usuario que ya no existe
-    await Grade.deleteMany({ $or: [{ from: userId }, { to: userId }] });
-    await DateModel.deleteMany({ users: userId });
+    // Con el usuario se borra todo lo que apunta a el: si no, quedarian datos de un usuario que ya no existe.
+    // Primero sus Dates, y con cada Date su Plan y sus mensajes (antes los Planes se quedaban huerfanos)
+    const dates = await DateModel.find({ users: userId }).select('_id');
+    const dateIds = dates.map((date) => String(date._id));
+
+    await deleteDateContents(dateIds);
+    await DateModel.deleteMany({ _id: { $in: dateIds } });
+
+    // Despues sus votos de La Orla (los que dio y los que recibio), sus bloqueos (los que hizo y los que
+    // le hicieron), los partes que mando o que hablan de el, y sus alertas de ayuda
+    await Promise.all([
+        Grade.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
+        Block.deleteMany({ $or: [{ blocker: userId }, { blocked: userId }] }),
+        Report.deleteMany({ $or: [{ reporter: userId }, { reported: userId }] }),
+        SafetyAlert.deleteMany({ user: userId })
+    ]);
+
     await User.deleteOne({ _id: userId });
 
     return 'deleted';
 };
 
-export default { getUserById, getDirectory, getUsers, getUserForAdmin, createUser, updateUser, archiveUser, restoreUser, deleteUser };
+export default { getUserById, getMe, updateMe, getDirectory, getUsers, getUserForAdmin, createUser, updateUser, archiveUser, restoreUser, deleteUser };

@@ -1,0 +1,16 @@
+# Lo que no se copia a la imagen. Las dependencias y lo compilado se generan dentro de ella.
+node_modules
+build
+
+# Repositorio y herramientas
+.git
+.github
+.vscode
+*.md
+Dockerfile
+.dockerignore
+
+# Variables de entorno: nunca dentro de la imagen (el contenedor las recibe al arrancar)
+.env
+.env.*
+!.env.example

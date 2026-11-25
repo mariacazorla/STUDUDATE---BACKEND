@@ -42,4 +42,8 @@ const GradeSchema: Schema = new Schema(
 // Ojo: el voto de A a B y el de B a A son parejas distintas, y los dos pueden existir.
 GradeSchema.index({ from: 1, to: 1 }, { unique: true });
 
+// Indice para el cupo de La Orla: contar los A+ que un usuario ha dado hoy. Con (from, value, createdAt)
+// MongoDB va directo a mis A+ y ya los tiene ordenados por fecha, sin recorrer todos los votos.
+GradeSchema.index({ from: 1, value: 1, createdAt: 1 });
+
 export default mongoose.model<IGradeModel>('Grade', GradeSchema);
