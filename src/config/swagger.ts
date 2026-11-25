@@ -302,6 +302,7 @@ const swaggerDocument = swaggerJsdoc({
             { name: 'Auth', description: 'Registro, login, renovación del token y logout' },
             { name: 'Users', description: 'Usuarios: el de la sesión, con quién abrir un Date y la gestión de usuarios del backoffice (solo admin)' },
             { name: 'Grades', description: 'Votos de La Orla: A+ o F de un usuario a otro (solo admin)' },
+            { name: 'Orla', description: 'La Orla del estudiante: siguiente Expediente, votar, cupo del día y deshacer' },
             { name: 'Dates', description: 'Citas entre dos usuarios que se han dado A+ (el admin ve todas; un usuario, las suyas)' },
             { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' }
         ],
