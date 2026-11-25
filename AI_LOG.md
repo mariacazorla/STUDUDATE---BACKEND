@@ -171,3 +171,15 @@ Modelo en el Sprint 2: Claude Fable 5.2.
   - El seed se compila con el resto (`build/seed.js`) y se ejecuta dentro del contenedor con `node`, sin `tsx`.
   - Un workflow de GitHub Actions pasa lint y build y publica la imagen en ghcr.io (`latest` desde `main`, `develop` desde `develop`).
   - Probado en local: `docker build`, el seed contra un MongoDB en una red de Docker sin puerto público, y el login con la cookie en `/api/auth` (la ruta que tendrá detrás de nginx).
+
+### 3. La Orla del estudiante (`feat/orla`)
+
+- **Pregunta:** cómo montar La Orla en el backend: el siguiente Expediente, votar con el A+ mutuo que abre el Date, el cupo de 30 A+ al día y deshacer en 10 segundos.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Ahora la pantalla principal de Studate, La Orla (bloque 3 del plan, de la 20 a la 25). Recuerda que esto es como un Tinder, pero para estudiantes: te sale el Expediente de alguien y le pones A+ o F. Primero el backend: el siguiente perfil (que no sea yo, que no lo haya votado y sin bloqueos entre los dos), votar, el A+ mutuo que abre el Date, el cupo de 30 A+ al día y deshacer en 10 segundos. Todo con JSON Web Token, como el resto. [...] Dime el plan de acción.» Tras ver el plan, Diego lo aprobó para proceder con el backend.
+- **Incoherencias:**
+  - El `/grades` que ya existía es el CRUD del backoffice (solo admin). La Orla es el flujo del estudiante y necesita otras reglas (el `from` del token, el cupo, el bloqueo), así que no encajaba en `/grades`.
+  - `GradeService.createGrade` ya abría el Date, pero descarta el Date que devuelve y acepta usuarios inactivos (el admin puede). La Orla necesita el Date en la respuesta y solo estudiantes activos.
+- **Solución:**
+  - Un router nuevo `/orla` (rol `user`) con `OrlaService`: `getNext` (excluye al propio usuario, a los ya votados y a los bloqueados en los dos sentidos, y añade el cupo restante), `vote` (reutiliza `openDateIfMutual` y devuelve el Date) y `undo`.
+  - Cupo de 30 A+ por día natural con el índice `(from, value, createdAt)` en Grade; las F no cuentan. Deshacer solo un voto propio de menos de 10 s, borrando también el Date que ese A+ hubiera abierto.
+  - Joi del body del voto, Swagger con el tag Orla, y 23 pruebas con `fetch` contra la API local, todas en verde.
