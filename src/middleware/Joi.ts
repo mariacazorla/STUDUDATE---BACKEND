@@ -4,8 +4,14 @@ import { NextFunction, Request, Response } from 'express';
 
 import { DATE_STATUSES, DateStatus } from '../models/Date';
 import { GRADE_VALUES, GradeValue, IGrade } from '../models/Grade';
+import { MESSAGE_MAX_LENGTH } from '../models/Message';
 import { ISpin, MAX_SPINS, PLAN_STATUSES, PlanStatus } from '../models/Plan';
+import { REPORT_REASONS, REPORT_SEVERITIES } from '../models/Report';
 import { IUser, PHOTO_MAX_LENGTH, USER_ROLES, UserRole } from '../models/User';
+
+// Cuantos elementos devuelve un listado si la peticion no dice limit. Esta en un solo sitio para
+// que todos los listados paginen igual
+export const PAGE_SIZE = 10;
 
 export interface PaginationQuery {
     page: number;
@@ -149,14 +155,14 @@ export const Schemas = {
     // Validacion de los parametros de paginacion
     pagination: Joi.object<PaginationQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
         search: Joi.string().trim().max(100).allow('').default('')
     }),
 
     // Validacion de los filtros del listado de usuarios: los de la paginacion y tres mas
     userList: Joi.object<UserListQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
         search: Joi.string().trim().max(100).allow('').default(''),
 
         // Solo los usuarios de un rol
@@ -175,7 +181,7 @@ export const Schemas = {
     // Validacion de los filtros del listado de Dates
     dateList: Joi.object<DateListQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
 
         // Solo los de una bandeja: pending, ongoing o closed
         status: Joi.string().valid(...DATE_STATUSES),
@@ -187,7 +193,7 @@ export const Schemas = {
     // Validacion de los filtros del listado de Planes
     planList: Joi.object<PlanListQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
 
         // Texto que se busca en el sitio de las tiradas ("cafe" encuentra "Cafetería de la EETAC")
         search: Joi.string().trim().max(100).allow('').default(''),
@@ -205,7 +211,7 @@ export const Schemas = {
     // Validacion de los filtros del listado de votos
     gradeList: Joi.object<GradeListQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
 
         // Solo los A+ o solo los F
         value: Joi.string().valid(...GRADE_VALUES),
@@ -230,9 +236,15 @@ export const Schemas = {
         login: Joi.object<IUser>({
             email: Joi.string().email().required().example('admin@example.com'),
             password: Joi.string().required().example('studate26')
+        }),
+
+        // Refresh: la web no manda body (el refresh token va en la cookie), y por eso el campo es opcional.
+        // La app del movil no tiene cookie y lo manda aqui
+        refresh: Joi.object({
+            refreshToken: Joi.string().example('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...')
         })
 
-        // Refresh y logout no tienen esquema: no llevan body, el refresh token va en una cookie
+        // Logout no tiene esquema: no lleva body
     },
 
     // Validaciones de la gestion de usuarios del backoffice
@@ -326,6 +338,67 @@ export const Schemas = {
                 .example('confirmed'),
             spins
         }).custom(planRules)
+    },
+
+    // ---- Modelos del Sprint 2. Sus rutas llegan con cada funcionalidad; los esquemas ya estan aqui ----
+    // En ninguno se acepta quien hace la peticion (from, blocker, reporter, user): sale siempre del
+    // token (req.user), asi nadie puede escribir, bloquear o mandar un parte en nombre de otro
+
+    // Validaciones del chat
+    message: {
+        // Enviar un mensaje: solo el texto. El Date es la sala del chat
+        create: Joi.object({
+            // trim + min(1): un mensaje vacio ('' o '   ') no es valido
+            text: Joi.string().trim().min(1).max(MESSAGE_MAX_LENGTH).required().example('¿Quedamos en la cafetería de la EETAC?')
+        })
+    },
+
+    // Validaciones de los bloqueos
+    block: {
+        // Bloquear a alguien: el id del usuario al que se bloquea
+        create: Joi.object({
+            blocked: Joi.string().regex(OBJECT_ID).required().example('6ab3f2fe9c500204a7d5f8a4')
+        })
+    },
+
+    // Validaciones de los partes
+    report: {
+        // Mandar un parte: sobre quien, por que y, si se quiere, el Date donde paso y un comentario
+        create: Joi.object({
+            reported: Joi.string().regex(OBJECT_ID).required().example('6ab3f2fe9c500204a7d5f8a4'),
+            date: Joi.string().regex(OBJECT_ID).example('6ab3f2fe9c500204a7d5fa01'),
+            reason: Joi.string()
+                .valid(...REPORT_REASONS)
+                .required()
+                .example('harassment'),
+            text: Joi.string().trim().max(500).allow('').example('No para de escribirme aunque le he dicho que no.')
+        }),
+
+        // Revisar un parte (solo admin): se queda como revisado o descartado, con la gravedad y lo que se ha hecho.
+        // 'open' no se acepta: un parte revisado no vuelve a quedar abierto
+        review: Joi.object({
+            status: Joi.string().valid('reviewed', 'dismissed').required().example('reviewed'),
+            severity: Joi.string()
+                .valid(...REPORT_SEVERITIES)
+                .example('high'),
+            resolution: Joi.string().trim().max(500).allow('').example('Cuenta desactivada y aviso al usuario.')
+        })
+    },
+
+    // Validaciones de las alertas de seguridad (el boton de ayuda)
+    safetyAlert: {
+        // Pedir ayuda: todo es opcional, porque quien pide ayuda no esta para rellenar un formulario.
+        // Si se pide desde un chat, viaja el Date (o el Plan) para saber con quien esta
+        create: Joi.object({
+            date: Joi.string().regex(OBJECT_ID).example('6ab3f2fe9c500204a7d5fa01'),
+            plan: Joi.string().regex(OBJECT_ID).example('6ab3f2fe9c500204a7d5fb01'),
+            message: Joi.string().trim().max(300).allow('').example('Me siento incómoda, ¿podéis llamarme?')
+        }),
+
+        // Atender una alerta (solo admin): atendida o falsa alarma. 'open' no se acepta
+        attend: Joi.object({
+            status: Joi.string().valid('attended', 'false_alarm').required().example('attended')
+        })
     }
 };
 

@@ -136,3 +136,25 @@ Herramienta: Claude Code (Anthropic). Modelo: Claude Opus 5.5.
 - **Prompt:** «Arregla lo del formato como un fix.»
 - **Incoherencias:** en el frontend había 22 ficheros que ya no cumplían Prettier antes del examen. Solo 3 (los de `dates-list`) se han tocado en el Mínimo 1.
 - **Solución:** `prettier --write` solo en `dates-list.ts`, `.html` y `.spec.ts`, en su propia rama de fix. Comprobamos que, quitando espacios, saltos de línea y comas finales, el contenido es idéntico (solo cambia el formato). Los tests, el lint y el build siguen igual. Los otros 19 ficheros no se tocan para no mezclar cambios ajenos al examen.
+
+# Sprint 2
+
+Modelo en el Sprint 2: Claude Fable 5.2.
+
+### 1. Estructura: la sesión, los modelos y la paginación (`feat/estructura`)
+
+- **Pregunta:** cómo dejar el backend preparado para la web en React, la web en Docker y la app del móvil, con todos los modelos del sprint ya creados.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Empezamos por la estructura, que es la base de todo. Las tareas son las del bloque 1 del plan (de la 1 a la 15). Primero el backend. Hay que dejar la sesión preparada para la web en local, la web en Docker y el móvil: CORS con varios orígenes, la cookie del refresh configurable para poder servir la API detrás de /api, y el refresh token también en el body para el móvil, sin quitar la cookie de la web. Además hay que crear ya todos los modelos (User, Grade, Date, Plan, Message, Block, Report y SafetyAlert) con los campos nuevos que tenemos en el plan de la base de datos, porque son la base de todo lo demás. La paginación del servidor pasa a 10 por página: 5 se queda muy corto. Y todo tiene que ir seguro con JSON Web Token: solo el registro y el login (y el refresh y el logout) van sin token, y la protección se pone en las rutas, como le gusta al profesor. [...] Las cosas se hacen por feats: una rama por grupo de tareas, como en el Mínimo 1, y un commit por tarea. Dime el plan de acción.» Después de ver el plan y los ajustes que proponía Claude, lo aprobamos tal cual («procede»), le dimos permiso para rehacer el seed y la base de datos local, y le pedimos que, si salía alguna incompatibilidad que no hubiéramos tenido en cuenta, la dejara bien resuelta pensando en el futuro.
+- **Incoherencias:**
+  - El plan hablaba del rol "student", pero el backend y el plan de la base de datos usan `user` y `admin`.
+  - El plan decía que el refresh leyera la cookie y, si no había, el body. Un teléfono también guarda cookies: con ese orden, la cookie de una sesión anterior podía renovar la cuenta equivocada.
+  - Los contactos de confianza son datos de terceras personas y habrían salido en todos los listados de usuarios.
+  - Al eliminar un usuario para siempre se borraban sus Dates, pero no los Planes de esos Dates, que se quedaban huérfanos. Venía del Mínimo 1.
+  - Los modelos nuevos todavía no tienen rutas, así que el servidor no los importa: sin hacer nada, sus colecciones y sus índices no se habrían creado.
+- **Solución:**
+  - El rol sigue siendo `user`; "estudiante" es solo el nombre que se verá en pantalla.
+  - `CORS_ORIGINS` con una lista de orígenes, y `REFRESH_COOKIE_PATH` y `COOKIE_SECURE` para la cookie. Con la cabecera `X-Client: movil`, el login devuelve el refresh token en el JSON y no pone cookie; en `/auth/refresh` manda el body sobre la cookie. La web no cambia.
+  - `Message`, `Block`, `Report` y `SafetyAlert` con sus índices y sus esquemas de Joi. `trustedContacts` con `select: false`. `Date` con `startedAt`, `closedAt`, `closedReason` e `history`, que empieza con la entrada `pending` al abrirse.
+  - Paginación de 10 con una sola constante (`PAGE_SIZE`).
+  - Un `fix` aparte para el borrado: con cada Date se borran su Plan y sus mensajes, y con el usuario, sus bloqueos, partes y alertas.
+  - El seed importa los modelos nuevos, espera a sus índices con `init()` y crea datos de ejemplo de todo. Swagger documenta los esquemas nuevos y los dos modos del refresh.
