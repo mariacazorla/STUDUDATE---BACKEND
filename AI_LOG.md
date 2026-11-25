@@ -212,3 +212,17 @@ Modelo en el Sprint 2: Claude Fable 5.2.
   - `ChatService` con las reglas (solo los dos del Date, turno de `firstTurn` mientras está pendiente, nada en un Date cerrado) y `sockets/Chat.ts` con los eventos `date:join`, `date:message`, `date:read`, `date:updated` y `chat:error`; el texto se valida con el mismo Joi que una ruta.
   - `GET /dates/:dateId/messages` paginado (página 1, los más nuevos). `POST` y `PUT /dates` solo admin; `updateStatus`, `extendDate`, el primer mensaje y el cierre por caducidad escriben en el `history` con `by`, `reason` y `at`. `jobs/ExpireDates.ts` cierra los pendientes caducados cada minuto y avisa a la sala.
   - README con la tabla de eventos del socket, contrato en LOGS y 56 comprobaciones con `fetch` y `socket.io-client`.
+
+### 6. Seguridad (`feat/seguridad`)
+
+- **Pregunta:** cómo montar la conciencia digital en el backend: bloquear, mandar un parte al admin y el botón de ayuda con los contactos de confianza opcionales.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Ahora las funcionalidades de conciencia digital, la seguridad (bloque 6 del plan, de la 34 a la 38). Bloquear: si alguien te da mala espina, lo bloqueas y ya no vuelve a aparecer, ni en La Orla ni en los chats. Reportar: de momento el parte va al administrador, y el administrador, según la gravedad, ya verá cómo actuar. A futuro esto se podría automatizar o conectar con otros sistemas, como la policía, pero ahí hay que ir con mucho cuidado; de momento, solo al administrador. Y el botón de ayuda con los contactos de confianza, que son opcionales: no se obliga a nadie a tenerlos, y si no hay, el aviso llega igualmente a los administradores. Primero el backend y después la web. Dime el plan de acción.» Diego pidió que se hicieran todos los bloques seguidos sin parar en cada uno, preguntando solo si surgía algo.
+- **Incoherencias:**
+  - "Ya no vuelve a aparecer en los chats" no está resuelto con solo guardar el bloqueo: el Date que tienen los dos seguiría abierto. Se decidió que bloquear cierra el Date (`closedReason: 'blocked'`, que el modelo ya tenía previsto) y que desbloquear no lo reabre.
+  - Un parte o una alerta pueden llevar el Date desde el que se mandan; si no se comprueba, cualquiera podría colgarlos de un Date ajeno.
+  - "Avisar a los contactos de confianza" no tiene un servicio de correo real en el proyecto: se simula en el log del servidor, como ya hacía el email de bienvenida.
+  - Los admin tienen que recibir la alerta "al momento": hacía falta una sala del socket solo para ellos, que no existía.
+- **Solución:**
+  - `BlockService` (bloquear cierra el Date y avisa a su sala; desbloquear; `isBlockedBetween`), `ReportService` (crear con el Date comprobado, listar con filtros, revisar con gravedad, resolución, quién y cuándo) y `SafetyAlertService` (crear con el Date o Plan comprobado, avisar a los contactos, listar, atender).
+  - Sala `admins` en el socket: los sockets con rol `admin` entran al conectar y reciben `alert:new` y `alert:updated` (`emitToAdmins`).
+  - Rutas `/blocks`, `/reports` y `/alerts` con sus roles (mandar es del estudiante, ver y revisar del admin), Joi para los filtros nuevos, Swagger con tres tags, contrato en LOGS y 43 comprobaciones con `fetch` y `socket.io-client`.

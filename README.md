@@ -146,7 +146,7 @@ src/
   library/         Utilidades compartidas
     Logging.ts       Mensajes de consola con fecha y color (info, warning, error)
   routes/          El mapa de URLs: qué petición va a qué controller
-    Auth.ts, Users.ts, Grade.ts, Orla.ts, Date.ts, Plan.ts
+    Auth.ts, Users.ts, Grade.ts, Orla.ts, Date.ts, Plan.ts, Block.ts, Report.ts, SafetyAlert.ts
   sockets/         El chat en tiempo real con socket.io
     Chat.ts          Arranca socket.io sobre el servidor HTTP: una sala por Date, turno de palabra y mensajes
     events.ts        El contrato de eventos del chat (los mismos tipos que tiene el frontend en packages/shared)
@@ -162,9 +162,10 @@ src/
     Logger.ts        Escribe en consola cada petición y su código de respuesta
     ErrorHandler.ts  Convierte cualquier error en su código: 400, 401, 404, 409, 422 o 500
   controllers/     Leen la petición (req), llaman al service y eligen la respuesta (res)
-    Auth.ts, Users.ts, Grade.ts, Orla.ts, Date.ts, Plan.ts
+    Auth.ts, Users.ts, Grade.ts, Orla.ts, Date.ts, Plan.ts, Block.ts, Report.ts, SafetyAlert.ts
   services/        Leen y escriben en la base de datos a través de los models. No saben que existe HTTP (ni socket.io)
-    AuthService.ts, UserService.ts, GradeService.ts, OrlaService.ts, DateService.ts, PlanService.ts, ChatService.ts
+    AuthService.ts, UserService.ts, GradeService.ts, OrlaService.ts, DateService.ts, PlanService.ts, ChatService.ts,
+    BlockService.ts, ReportService.ts, SafetyAlertService.ts
   models/          Esquemas de Mongoose y las interfaces de cada recurso
     User.ts          Usuario, y las interfaces de los tokens (payload) y de req.user
     Grade.ts         Voto de La Orla (A+ o F de un usuario a otro)
@@ -271,7 +272,10 @@ si su petición estaba bien formada.
 | `/orla` (La Orla del estudiante) | Solo `user` |
 | `/dates`, `/dates/:dateId`, `/dates/:dateId/messages`, `/dates/:dateId/extend` | Cualquier usuario con sesión, cada uno sus propios Dates; el admin, todos |
 | `POST /dates`, `PUT /dates/:dateId`, `DELETE /dates/:dateId` | Solo `admin`: los estudiantes no abren ni cambian Dates a mano |
-| El chat (socket.io) | Cualquier usuario con sesión, solo en las salas de sus propios Dates |
+| El chat (socket.io) | Cualquier usuario con sesión, solo en las salas de sus propios Dates. Los `admin` entran además en la sala `admins` y reciben las alertas de ayuda |
+| `/blocks` (bloqueos) | Solo `user` |
+| `POST /reports` (mandar un parte), `POST /alerts` (pedir ayuda) | Solo `user` |
+| `GET /reports`, `PUT /reports/:reportId/review`, `GET /alerts`, `PUT /alerts/:alertId/attend` | Solo `admin` |
 
 Decisiones y límites, porque es un proyecto de clase:
 
@@ -353,6 +357,18 @@ Todas las rutas salvo `/auth/*` y `/ping` necesitan la cabecera `Authorization: 
 | PUT | `/dates/:dateId` | Cambia el Date de bandeja a mano; queda en el historial. Solo admin | `{ "status": "closed", "reason": "..." }` |
 | POST | `/dates/:dateId/extend` | Usa la prórroga: 24 horas más, una sola vez (y no en un Date cerrado) | |
 | DELETE | `/dates/:dateId` | Elimina un Date (borrado físico). Solo admin | |
+| GET | `/blocks` | A quién he bloqueado | |
+| POST | `/blocks` | Bloquear a alguien: cierra el Date que tuviéramos y ninguno vuelve a ver al otro | `{ "blocked": "<id>" }` |
+| DELETE | `/blocks/:userId` | Quitar un bloqueo mío (el Date no se reabre) | |
+| POST | `/reports` | Mandar un parte sobre alguien (queda abierto para el admin) | `{ "reported": "<id>", "reason": "harassment", "date": "<id>", "text": "..." }` |
+| GET | `/reports` | Lista los partes, paginados (`?page=&limit=&status=&severity=&reported=`). Solo admin | |
+| GET | `/reports/:reportId` | Devuelve un parte. Solo admin | |
+| PUT | `/reports/:reportId/review` | Revisa un parte: gravedad y lo que se ha hecho; queda quién y cuándo. Solo admin | `{ "status": "reviewed", "severity": "high", "resolution": "..." }` |
+| POST | `/alerts` | Pedir ayuda: avisa al momento a los admin y a los contactos de confianza (si hay) | `{ "date": "<id>", "message": "..." }` (todo opcional) |
+| GET | `/alerts` | Lista las alertas, paginadas (`?page=&limit=&status=`). Solo admin | |
+| GET | `/alerts/:alertId` | Devuelve una alerta. Solo admin | |
+| PUT | `/alerts/:alertId/attend` | Atiende una alerta; queda quién y cuándo. Solo admin | `{ "status": "attended" }` |
+
 Un usuario tiene `name`, `email` y `role` (`user` o `admin`), los datos de su perfil (`birthDate`,
 `degree` o titulación, `lookingFor` o "Qué busco", `bio` y `photo`) y el estado de su cuenta: `active`
 (si un admin lo ha desactivado) y `deleted` con `deletedAt` (si está archivado). La contraseña nunca se
@@ -436,6 +452,26 @@ Las reglas del chat (`src/services/ChatService.ts`): en un Date `pending` solo p
 primer turno (`firstTurn`, sorteado al abrirlo); el primer mensaje lo pasa a `ongoing` y a partir de ahí
 escriben los dos; en un Date `closed` se puede entrar a leer, pero no escribir.
 
+Los `admin` entran además, al conectar, en la sala `admins`, por la que les llegan al momento las alertas del
+botón de ayuda: `alert:new` (alguien ha pedido ayuda) y `alert:updated` (un admin la ha atendido). Un estudiante
+nunca recibe esos eventos: el rol sale del token.
+
+## Seguridad: bloquear, partes y botón de ayuda
+
+Son las tres funciones de "conciencia digital" del blog, cada una con su modelo y sus rutas:
+
+- **Bloquear** (`/blocks`, modelo `Block`): si alguien te da mala espina, lo bloqueas y ninguno de los dos vuelve
+  a ver al otro: ni en La Orla (no sale y no se puede votar) ni en los chats (el Date que tuvierais se cierra con
+  `closedReason: 'blocked'`, y la otra persona ve el chat cerrado sin que se le diga por qué). A la persona
+  bloqueada no se le avisa. Desbloquear no reabre el Date.
+- **Partes** (`/reports`, modelo `Report`): un estudiante manda un parte sobre alguien (motivo, comentario y, si
+  es desde un chat, el Date). Solo lo ve el admin, que lo revisa poniendo la gravedad y anotando lo que ha hecho;
+  queda guardado qué admin lo revisó y cuándo. De momento no hay nada automático.
+- **Botón de ayuda** (`/alerts`, modelo `SafetyAlert`): durante un Date, el estudiante pide ayuda (todo opcional:
+  un mensaje y desde qué Date). Se crea la alerta, los admin conectados la reciben al momento por el socket y se
+  avisa a los contactos de confianza de Mi perfil, si los tiene (el aviso se simula en el log del servidor, como el
+  email de bienvenida). Sin contactos, la alerta se crea igual. Atenderla deja quién y cuándo.
+
 Códigos de respuesta: 201 al crear, 200 al leer o modificar, 204 al borrar, 400 si el id de la URL
 no tiene forma de id de MongoDB, 401 si falta el token o no es válido, 403 si el usuario no tiene el
 rol necesario, 404 si el id no existe, 409 si el email ya existe, 422 si el body no es
@@ -477,7 +513,7 @@ Las piezas comunes (datos generales, esquemas, respuestas de error y el esquema 
 `bearerAuth`) están en `src/config/swagger.ts`. Cada respuesta de error lleva de ejemplo el mensaje que
 devuelve de verdad la API (por ejemplo, `NotArchived`, `OwnUser`, `GradeConflict` o `DateConflict`), para
 que quien hace el frontend sepa qué va a recibir. Las rutas están agrupadas por etiquetas: Health, Auth,
-Users, Grades, Orla, Dates y Plans. Los eventos del chat no son rutas HTTP y no salen en Swagger: están en la
+Users, Grades, Orla, Dates, Plans, Blocks, Reports y Alerts. Los eventos del chat no son rutas HTTP y no salen en Swagger: están en la
 tabla de [Chat en tiempo real](#chat-en-tiempo-real-socketio) y en `src/sockets/events.ts`. En `src/routes/Auth.ts` la documentación va debajo
 del código, para que el router se lea de un vistazo.
 
