@@ -214,6 +214,15 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 - [x] Partes (modelo Report): solo los ve el admin, que les pone la gravedad y anota lo que ha hecho · María
 - [x] Botón de ayuda (modelo SafetyAlert): aviso a los admin al momento y a los contactos de confianza si los hay, y atenderla · Diego
 
+#### Segundo despliegue y cierre (`feat/cierre`, `feat/documentacion`)
+
+- [ ] Segundo despliegue con todo y prueba de punta a punta en la web y en el móvil (pendiente del puerto que reenvía el proxy de la UPC) · Miguel Ángel
+- [x] GitHub Actions: lint, build (y tests en el frontend) en cada push, en el backend y en el frontend · Diego
+- [x] LOGS y README de los repos al día · Miguel Ángel
+- [x] Diagrama de clases de la base de datos · María
+- [x] Flujo de arquitectura: web, móvil, nginx, API, socket.io y MongoDB, y el camino de una petición con JWT (en el README de STUDATE---DOCKER) · Diego
+- [ ] GitHub Project y Excel de horas al día (al hacer push) · Diego
+
 ## Bitácora
 
 La bitácora del Seminario 7, de donde viene este código, se conserva en el tag `seminari7-base`
@@ -609,3 +618,21 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   `alert:new` al momento y un estudiante no; Hugo sin contactos 201 con 0; la lista es solo del admin; atender guarda quién y cuándo y los admin
   reciben `alert:updated`; reabrir 422.
 - Prompt de IA usado: el del bloque "6 · Seguridad" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).
+
+### 2026-11-25 · Sprint 2: cierre y documentación (`feat/documentacion`)
+
+- **GitHub Actions**: el workflow `ci.yml` de este repo pasa `npm run lint` y `npm run build` en cada push y pull request a `main` y `develop`, y
+  si es un push publica la imagen en ghcr.io (`:latest` desde `main`, `:develop` desde `develop`). El del frontend hace lo mismo con lint, tipos,
+  tests y build. El backend no tiene tests automáticos: su validación son las pruebas con `fetch` y `socket.io-client` de cada rama, apuntadas en
+  esta bitácora (56 en el chat, 43 en seguridad, 23 en La Orla).
+- **Diagrama de clases**: `docs/diagrama-bd.svg`, enlazado desde el README. Se genera a partir del fichero de datos del equipo (el mismo del visor de
+  la base de datos del blog) y se ha comprobado modelo a modelo contra `src/models/`: los campos, los índices (`(from, value, createdAt)` del cupo,
+  `(status, expiresAt)` del cierre, `(date, createdAt)` del chat, los únicos de email, `(from, to)`, `(blocker, blocked)` y `date` del Plan) y las
+  reglas del Sprint 2 coinciden con el código.
+- **README y LOGS al día**: el README describe las rutas nuevas (chat, bloqueos, partes y alertas), el socket y quién puede qué; el contrato de
+  este LOGS tiene todas las rutas y eventos del sprint, con sus códigos y mensajes.
+- **Flujo de arquitectura**: en el README de [STUDATE---DOCKER](https://github.com/mariacazorla/STUDATE---DOCKER), con el diagrama de la web, el
+  móvil, nginx, la API, socket.io y MongoDB, y el camino de una petición con JWT y de un mensaje del chat.
+- **Segundo despliegue**: preparado en STUDATE---DOCKER para el servidor detrás del proxy de la UPC (HTTPS lo termina el proxy; la VM sirve http y la
+  API pone la cookie `Secure`). Queda hacerlo cuando se sepa a qué puerto de la máquina reenvía el proxy cada dominio.
+- Prompt de IA usado: el del bloque "9 · Segundo despliegue y cierre" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).

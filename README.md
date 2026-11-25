@@ -522,6 +522,17 @@ respuesta, pulsa el botón **Authorize** de arriba a la derecha y pégalo (solo 
 `Bearer`). A partir de ahí Swagger envía la cabecera en todas las peticiones. Las rutas con candado son
 las que lo necesitan.
 
+## Diagrama de clases de la base de datos
+
+![Diagrama de clases de la base de datos de Studate](docs/diagrama-bd.svg)
+
+Los ocho modelos de `src/models/` con sus campos, sus índices y sus reglas, agrupados por el sprint en
+que entra cada cosa (Sprint 1, Mínimo 1 y Sprint 2 son lo que hay en el código; Sprint 3 y la entrega
+final, lo previsto). Las flechas son las referencias (`ref`) entre modelos: por ejemplo, un `Date` apunta
+a dos `User` y un `Message` a su `Date` y a quien lo escribió. El diagrama se genera a partir de un solo
+fichero de datos del equipo, el mismo que usa el visor de la base de datos del blog, para que coincida
+con los modelos del código: si un modelo cambia, se cambia ahí y se vuelve a generar.
+
 ## Cómo se ha probado la API
 
 No hay tests automáticos en el backend. Al cerrar cada rama se prueba lo hecho contra la API arrancada y

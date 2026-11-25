@@ -226,3 +226,16 @@ Modelo en el Sprint 2: Claude Fable 5.2.
   - `BlockService` (bloquear cierra el Date y avisa a su sala; desbloquear; `isBlockedBetween`), `ReportService` (crear con el Date comprobado, listar con filtros, revisar con gravedad, resolución, quién y cuándo) y `SafetyAlertService` (crear con el Date o Plan comprobado, avisar a los contactos, listar, atender).
   - Sala `admins` en el socket: los sockets con rol `admin` entran al conectar y reciben `alert:new` y `alert:updated` (`emitToAdmins`).
   - Rutas `/blocks`, `/reports` y `/alerts` con sus roles (mandar es del estudiante, ver y revisar del admin), Joi para los filtros nuevos, Swagger con tres tags, contrato en LOGS y 43 comprobaciones con `fetch` y `socket.io-client`.
+
+### 7. Cierre y documentación (`feat/documentacion`)
+
+- **Pregunta:** cómo dejar el repo listo para la entrega: GitHub Actions, LOGS y README al día, el diagrama de clases y el flujo de arquitectura.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Ya toca el segundo despliegue y el cierre (bloque 9 del plan, de la 49 a la 54). Subimos la última versión al servidor y la probamos de punta a punta, en la web y en el móvil. También hay que hacer lo de GitHub Actions, con el lint, el build y los tests en cada push, en el backend y en el frontend. Y dejar todo al día: LOGS y README, el diagrama de clases, el flujo de arquitectura, y el GitHub Project y las horas. Dime el plan de acción.»
+- **Incoherencias:**
+  - El plan pide "tests en cada push" en el backend, pero el backend no tiene tests automáticos (se decidió en el Sprint 1 probar con curl y apuntarlo en la bitácora): el workflow pasa lint y build, y los tests van en el del frontend, que sí los tiene.
+  - El diagrama de clases del equipo incluye los modelos previstos para el Sprint 3 y la entrega final (`Session`, `Place`, `University`), que no están en el código: se deja así, agrupado por sprints, y el README lo explica.
+  - El despliegue de verdad depende del puerto que reenvía el proxy de la UPC a la máquina, que todavía no se sabe: se deja preparado y documentado, y se hace cuando se sepa.
+- **Solución:**
+  - Los workflows ya estaban desde el bloque de Docker; se revisan y se documenta qué pasa cada uno.
+  - `docs/diagrama-bd.svg` en el repo, comprobado contra `src/models/`, y una sección del README que lo explica.
+  - El flujo de arquitectura, en el README del repo de despliegue, enlazado desde aquí. LOGS y README repasados contra el código.
