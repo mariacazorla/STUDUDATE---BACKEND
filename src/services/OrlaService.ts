@@ -1,7 +1,8 @@
 import Block from '../models/Block';
+import DateModel from '../models/Date';
 import Grade, { GradeValue } from '../models/Grade';
 import User from '../models/User';
-import { openDateIfMutual } from './DateService';
+import { deleteDate, openDateIfMutual } from './DateService';
 
 // La Orla es la pantalla del estudiante: va viendo Expedientes y les pone A+ o F. Este service tiene lo
 // que no hace el admin: el siguiente perfil, votar como estudiante, el cupo del dia y deshacer.
@@ -9,6 +10,9 @@ import { openDateIfMutual } from './DateService';
 
 // Cuantos A+ puede dar un estudiante en un dia natural. El 31 ya no se deja: hay que esperar a mañana.
 export const DAILY_A_PLUS_CAP = 30;
+
+// Cuanto tiempo hay para deshacer un voto, en milisegundos. Pasados 10 s, el voto se queda.
+export const UNDO_WINDOW_MS = 10_000;
 
 // Los campos del Expediente: lo que se ve de otro estudiante en La Orla. Nunca el email ni nada privado.
 const EXPEDIENTE_FIELDS = 'name degree lookingFor bio photo birthDate';
@@ -56,12 +60,12 @@ export const getNext = async (userId: string) => {
 };
 
 // Lo que puede salir mal al votar. El controlador lo traduce a un codigo HTTP
-export type VoteError = 'same-user' | 'not-found' | 'blocked' | 'already-voted';
+export type VoteError = 'same-user' | 'not-found' | 'blocked' | 'already-voted' | 'cap-reached';
 
 // Votar un Expediente como estudiante. "from" es quien vota (sale del token), "to" a quien.
 // Comprueba, por orden: que no me voto a mi mismo, que el otro existe y es estudiante, que no hay
-// bloqueo entre los dos y que no lo habia votado ya. Si es A+ y el otro ya me habia dado A+, se abre
-// el Date con el sorteo del turno (openDateIfMutual).
+// bloqueo entre los dos, que no lo habia votado ya y, si es A+, que no he agotado el cupo del dia.
+// Si es A+ y el otro ya me habia dado A+, se abre el Date con el sorteo del turno (openDateIfMutual).
 export const vote = async (from: string, to: string, value: GradeValue) => {
     if (from === to) {
         return { error: 'same-user' as const };
@@ -86,6 +90,11 @@ export const vote = async (from: string, to: string, value: GradeValue) => {
         return { error: 'already-voted' as const };
     }
 
+    // El cupo solo afecta a los A+. Las F no se cuentan ni se limitan
+    if (value === 'A+' && (await remainingAPlus(from)) <= 0) {
+        return { error: 'cap-reached' as const };
+    }
+
     const grade = await Grade.create({ from, to, value });
 
     // El "match": si es A+ y el otro ya me habia dado A+, se abre el Date (openDateIfMutual sortea el
@@ -95,4 +104,41 @@ export const vote = async (from: string, to: string, value: GradeValue) => {
     return { grade, date, remaining: await remainingAPlus(from) };
 };
 
-export default { getNext, vote, remainingAPlus, DAILY_A_PLUS_CAP };
+// Lo que puede salir mal al deshacer
+export type UndoError = 'not-found' | 'too-late';
+
+// Deshacer un voto propio dentro de los 10 segundos. Si ese A+ habia abierto un Date, el Date se borra
+// tambien (con su Plan y sus mensajes, que casi nunca existiran en 10 s). Si han pasado los 10 s, 409.
+// Solo se puede deshacer un voto propio: el de otro devuelve 404, para no dejar adivinar votos ajenos.
+export const undo = async (gradeId: string, userId: string) => {
+    const grade = await Grade.findById(gradeId);
+
+    if (!grade || String(grade.from) !== userId) {
+        return { error: 'not-found' as const };
+    }
+
+    const createdAt = grade.get('createdAt') as Date;
+
+    if (Date.now() - createdAt.getTime() > UNDO_WINDOW_MS) {
+        return { error: 'too-late' as const };
+    }
+
+    // Si era un A+, pudo abrir un Date con la otra persona. Al quitar mi A+ ya no hay A+ mutuo, asi que
+    // ese Date no debe seguir existiendo
+    let dateRemoved = false;
+
+    if (grade.value === 'A+') {
+        const date = await DateModel.findOne({ users: { $all: [String(grade.from), String(grade.to)] } });
+
+        if (date) {
+            await deleteDate(String(date._id));
+            dateRemoved = true;
+        }
+    }
+
+    await grade.deleteOne();
+
+    return { dateRemoved, remaining: await remainingAPlus(userId) };
+};
+
+export default { getNext, vote, undo, remainingAPlus, DAILY_A_PLUS_CAP, UNDO_WINDOW_MS };

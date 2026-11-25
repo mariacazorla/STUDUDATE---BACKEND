@@ -2,7 +2,7 @@ import express from 'express';
 
 import controller from '../controllers/Orla';
 
-import { Schemas, ValidateJoi } from '../middleware/Joi';
+import { Schemas, ValidateId, ValidateJoi } from '../middleware/Joi';
 import { RequireRole } from '../middleware/RequireRole';
 import { VerifyToken } from '../middleware/VerifyToken';
 
@@ -69,5 +69,35 @@ router.get('/next', VerifyToken, RequireRole('user'), controller.next);
 
 // Votar un Expediente
 router.post('/votes', VerifyToken, RequireRole('user'), ValidateJoi(Schemas.orla.vote), controller.vote);
+
+/**
+ * @openapi
+ * /orla/votes/{gradeId}:
+ *   delete:
+ *     tags: [Orla]
+ *     summary: Deshacer mi último voto (10 s)
+ *     description: >
+ *       Borra un voto propio si tiene menos de 10 segundos; pasados, 409. Solo se puede deshacer un voto
+ *       propio (el de otro da 404). Si ese A+ había abierto un Date, el Date se borra también.
+ *     parameters:
+ *       - in: path
+ *         name: gradeId
+ *         required: true
+ *         schema: { type: string, pattern: '^[0-9a-fA-F]{24}$' }
+ *     responses:
+ *       200:
+ *         description: Voto deshecho
+ *         content:
+ *           application/json:
+ *             example: { dateRemoved: false, remaining: 27 }
+ *       400: { $ref: '#/components/responses/BadRequest' }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       409: { $ref: '#/components/responses/Conflict' }
+ */
+
+// Deshacer mi ultimo voto
+router.delete('/votes/:gradeId', VerifyToken, RequireRole('user'), ValidateId('gradeId'), controller.undo);
 
 export = router;
