@@ -272,6 +272,14 @@ export const Schemas = {
             active: Joi.boolean(),
 
             ...userProfile
+        }),
+
+        // Esquema de Mi perfil: lo que un estudiante cambia de si mismo. No estan el email, el rol ni
+        // active: si alguien los envia (por ejemplo role: 'admin'), Joi responde 422
+        updateMe: Joi.object({
+            name: Joi.string().trim().required().example('Laia Puig'),
+
+            ...userProfile
         })
     },
 

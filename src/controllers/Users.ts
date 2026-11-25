@@ -17,12 +17,29 @@ const readMe = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     try {
-        const user = await UserService.getUserById(req.user.id);
+        // El perfil completo, con los contactos de confianza (solo los ve su dueño)
+        const user = await UserService.getMe(req.user.id);
 
         if (user) {
             res.status(200).json({ user });
         } else {
             // El token es valido pero el usuario se ha borrado (o desactivado) despues de hacer login
+            res.status(404).json({ message: 'not found' });
+        }
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Edita el perfil del usuario con sesion (Mi perfil). El id sale del token; Joi ya ha dejado fuera
+// el email, el rol y active, asi que un estudiante no puede subirse a admin desde aqui
+const updateMe = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const user = await UserService.updateMe(req.user!.id, req.body);
+
+        if (user) {
+            res.status(200).json({ user });
+        } else {
             res.status(404).json({ message: 'not found' });
         }
     } catch (error) {
@@ -184,4 +201,4 @@ const deleteUser = async (req: Request<{ userId: string }>, res: Response, next:
     }
 };
 
-export default { readMe, readDirectory, listUsers, readUser, createUser, updateUser, archiveUser, restoreUser, deleteUser };
+export default { readMe, updateMe, readDirectory, listUsers, readUser, createUser, updateUser, archiveUser, restoreUser, deleteUser };
