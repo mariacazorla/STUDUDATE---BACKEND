@@ -1,0 +1,65 @@
+# En cada push (y en cada pull request) pasa el lint y el build. Si van bien y es un push, construye la
+# imagen de Docker y la publica en GitHub Container Registry (ghcr.io), como en el Seminario 10:
+#
+#   push a main     -> ghcr.io/<owner>/<repo>:latest   (la que despliega el docker compose)
+#   push a develop  -> ghcr.io/<owner>/<repo>:develop  (para probar lo que hay en develop en un servidor)
+#
+# GITHUB_TOKEN lo pone GitHub solo: no hay que crear ningún secreto. El paquete nace privado; para que el
+# servidor pueda bajarlo sin iniciar sesión hay que ponerlo público una vez (Packages > Package settings).
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  image:
+    name: Imagen de Docker
+    needs: verify
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # El nombre de la imagen es el del repositorio, en minúsculas (ghcr.io no admite mayúsculas)
+      - name: Nombre de la imagen
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.image.outputs.name }}:${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
