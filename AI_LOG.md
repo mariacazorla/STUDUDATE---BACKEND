@@ -183,3 +183,16 @@ Modelo en el Sprint 2: Claude Fable 5.2.
   - Un router nuevo `/orla` (rol `user`) con `OrlaService`: `getNext` (excluye al propio usuario, a los ya votados y a los bloqueados en los dos sentidos, y añade el cupo restante), `vote` (reutiliza `openDateIfMutual` y devuelve el Date) y `undo`.
   - Cupo de 30 A+ por día natural con el índice `(from, value, createdAt)` en Grade; las F no cuentan. Deshacer solo un voto propio de menos de 10 s, borrando también el Date que ese A+ hubiera abierto.
   - Joi del body del voto, Swagger con el tag Orla, y 23 pruebas con `fetch` contra la API local, todas en verde.
+
+### 4. Mi perfil (`feat/perfil`)
+
+- **Pregunta:** cómo dejar que el estudiante edite su perfil, su foto y sus contactos de confianza sin poder cambiarse el rol.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Ahora Mi perfil (bloque 4 del plan, de la 26 a la 28). Es lo mismo que en cualquier web que tiene un "mi perfil": tu zona de ajustes, pero personales. El estudiante edita su Expediente y su foto, pero no puede cambiarse el rol. Recuerda que de momento solo existen dos roles, administrador y estudiante; nada más por ahora. Aquí van también los contactos de confianza, y tienen que ser opcionales: no hay que obligar a nadie a ponerlos. Mismo estilo visual y mismo CSS global que el resto. Primero el backend y después la web. Dime el plan de acción.»
+- **Incoherencias:**
+  - `GET /users/me` solo devolvía `_id`, `name`, `email` y `role`: no servía para rellenar la pantalla de Mi perfil.
+  - Los contactos de confianza tienen `select: false` (son datos de terceras personas): había que decidir dónde se ven. Solo en `GET /users/me`, para su dueño.
+  - `VerifyToken` consulta el usuario en cada petición: no conviene cargarle el perfil entero y los contactos cada vez.
+- **Solución:**
+  - `getMe` (perfil completo con `+trustedContacts`) separado de `getUserById` (ligero, el de `VerifyToken`). `PUT /users/me` con `updateMe` y `findOneAndUpdate` con `runValidators`.
+  - El esquema `user.updateMe` reutiliza los campos del perfil y deja fuera `email`, `role` y `active`: enviar `role: 'admin'` responde 422. Los contactos, como lista opcional de hasta 3 (`[]` los quita).
+  - Swagger con `MyProfileInput` y la ruta PUT documentada; contrato y bitácora en LOGS.

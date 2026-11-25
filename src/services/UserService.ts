@@ -40,6 +40,23 @@ export const getUserById = async (userId: string): Promise<IUserProfile | null> 
     return profile;
 };
 
+// Funcion que devuelve el perfil completo del usuario con sesion, para la pantalla Mi perfil: ademas de
+// lo basico, el perfil (titulacion, bio, foto...) y los contactos de confianza, que tienen select: false
+// y hay que pedirlos a proposito. Solo aqui: el resto de la app nunca ve los contactos de nadie
+export const getMe = (userId: string) => {
+    return User.findById(userId).select('+trustedContacts');
+};
+
+// Los campos que un estudiante puede cambiar de su propio perfil. Ni el email (es con lo que entra),
+// ni el rol, ni si esta activo: eso solo lo toca el admin. Joi rechaza cualquier otro campo con 422
+export type MyProfileUpdate = Pick<IUser, 'name' | 'birthDate' | 'degree' | 'lookingFor' | 'bio' | 'photo' | 'trustedContacts'>;
+
+// Funcion que actualiza el perfil del usuario con sesion. Con new: true devuelve el documento ya
+// cambiado, con los contactos de confianza (para que la pantalla los vea tal como han quedado)
+export const updateMe = (userId: string, data: Partial<MyProfileUpdate>) => {
+    return User.findOneAndUpdate({ _id: userId }, data, { new: true, runValidators: true }).select('+trustedContacts');
+};
+
 // Funcion que devuelve la lista de usuarios con los que se puede abrir un Date: los demas usuarios
 // normales activos (el prehook ya quita a los inactivos y a los archivados), ordenados por nombre.
 // Solo se devuelven datos que cualquier usuario puede ver en la app: nombre, titulacion y foto
@@ -153,4 +170,4 @@ export const deleteUser = async (userId: string): Promise<DeleteUserResult> => {
     return 'deleted';
 };
 
-export default { getUserById, getDirectory, getUsers, getUserForAdmin, createUser, updateUser, archiveUser, restoreUser, deleteUser };
+export default { getUserById, getMe, updateMe, getDirectory, getUsers, getUserForAdmin, createUser, updateUser, archiveUser, restoreUser, deleteUser };

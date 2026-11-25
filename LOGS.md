@@ -31,7 +31,11 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
   El frontend guarda el access token solo en memoria, nunca en `localStorage` ni `sessionStorage`; al recargar la página lo recupera llamando a `/auth/refresh` y después a `/users/me`.
 - **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`) o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol
   necesario.
-- **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
+- **Usuario con sesión (Mi perfil)**: `GET /users/me` (con sesión, cualquier rol) responde `{ user }` con el perfil completo a partir del token: `{ _id, name, email,
+  role, birthDate?, degree?, lookingFor?, bio?, photo?, trustedContacts, active, deleted, createdAt, updatedAt }`. Es la única respuesta que incluye
+  `trustedContacts` (cada uno `{ name, email, phone? }`): solo los ve su dueño. `PUT /users/me` con `{ name, birthDate?, degree?, lookingFor?, bio?, photo?,
+  trustedContacts? }` responde 200 `{ user }`; `email`, `role` y `active` no se aceptan (422), así que un estudiante no puede subirse a admin.
+  `trustedContacts` es opcional, admite `[]` para quitarlos y como mucho 3 (el cuarto, 422).
 - **Con quién abrir un Date**: `GET /users/directory` (con sesión, cualquier rol) responde `{ users: [{ _id, name, degree?, photo? }] }`: los demás usuarios
   de rol `user` activos, ordenados por nombre.
 - **Usuario**: `{ _id, name, email, role, birthDate?, degree?, lookingFor?, bio?, photo?, active, deleted, deletedAt?, createdAt, updatedAt }`, nunca con
@@ -147,6 +151,11 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 - [x] Siguiente Expediente: usuario activo, que no soy yo, que no he votado y sin bloqueos entre los dos · María
 - [x] Votar como estudiante; el A+ mutuo abre el Date con el sorteo del turno · María
 - [x] Cupo de 30 A+ al día (con su índice) y deshacer en 10 s · María
+
+#### Mi perfil (`feat/perfil`)
+
+- [x] GET y PUT /users/me: el estudiante edita sus datos, pero no su rol · Miguel Ángel
+- [x] Contactos de confianza: opcionales y hasta 3 · Miguel Ángel
 
 ## Bitácora
 
@@ -476,3 +485,18 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   dentro de 10 s da 200 y borra el Date del A+ mutuo; deshacer el voto de otro da 404; el admin recibe 403; el A+ número 31 da 409 y la F sí se permite;
   deshacer a los 11 s da 409. El índice `(from, value, createdAt)` aparece en MongoDB.
 - Prompt de IA usado: el del bloque "3 · La Orla" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).
+
+### 2026-11-25 · Sprint 2: Mi perfil (`feat/perfil`)
+
+- `GET /users/me` pasa a devolver el perfil completo del usuario con sesión, incluidos los contactos de confianza, que tienen `select: false` en el
+  modelo y se piden a propósito solo aquí (`getMe`): el resto de la app nunca ve los contactos de nadie. `VerifyToken` sigue usando la versión
+  ligera (`getUserById`) para no cargar el perfil en cada petición.
+- `PUT /users/me` (`updateMe`) edita nombre, fecha de nacimiento, titulación, "qué busco", bio y foto. El esquema de Joi (`user.updateMe`) no tiene
+  `email`, `role` ni `active`: enviarlos responde 422, y así un estudiante no puede cambiarse el rol. La ruta va antes que `/:userId`, como el GET.
+- Contactos de confianza en el mismo PUT: lista opcional de hasta 3 `{ name, email, phone? }`; `[]` los quita; el cuarto, 422 (lo valida Joi y,
+  como segunda capa, el modelo).
+- Validación ejecutada: `npm run build` y `npm run lint` sin errores. Con curl y el seed recién hecho: `GET /users/me` de Laia trae titulación y
+  sus 2 contactos y nunca la contraseña; `PUT` cambia la bio y el nombre (200); con `role: admin` y con `email` responde 422 y el rol sigue siendo
+  `user`; sin token, 401. Con Pau: sin contactos al principio (0), guarda 2 (200), el cuarto da 422, un contacto sin email da 422, `[]` los deja a 0
+  y un perfil sin contactos se guarda igual (200).
+- Prompt de IA usado: el del bloque "4 · Mi perfil" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).

@@ -7,7 +7,7 @@ import { GRADE_VALUES, GradeValue, IGrade } from '../models/Grade';
 import { MESSAGE_MAX_LENGTH } from '../models/Message';
 import { ISpin, MAX_SPINS, PLAN_STATUSES, PlanStatus } from '../models/Plan';
 import { REPORT_REASONS, REPORT_SEVERITIES } from '../models/Report';
-import { IUser, PHOTO_MAX_LENGTH, USER_ROLES, UserRole } from '../models/User';
+import { IUser, MAX_TRUSTED_CONTACTS, PHOTO_MAX_LENGTH, USER_ROLES, UserRole } from '../models/User';
 
 // Cuantos elementos devuelve un listado si la peticion no dice limit. Esta en un solo sitio para
 // que todos los listados paginen igual
@@ -272,6 +272,26 @@ export const Schemas = {
             active: Joi.boolean(),
 
             ...userProfile
+        }),
+
+        // Esquema de Mi perfil: lo que un estudiante cambia de si mismo. No estan el email, el rol ni
+        // active: si alguien los envia (por ejemplo role: 'admin'), Joi responde 422
+        updateMe: Joi.object({
+            name: Joi.string().trim().required().example('Laia Puig'),
+
+            ...userProfile,
+
+            // Los contactos de confianza: opcionales (se puede enviar una lista vacia para quitarlos) y
+            // como mucho 3. Cada uno con nombre y email; el telefono es opcional
+            trustedContacts: Joi.array()
+                .items(
+                    Joi.object({
+                        name: Joi.string().trim().max(100).required().example('Marta Puig (hermana)'),
+                        email: Joi.string().email().required().example('marta.puig@example.com'),
+                        phone: Joi.string().trim().max(20).allow('').example('600 111 222')
+                    })
+                )
+                .max(MAX_TRUSTED_CONTACTS)
         })
     },
 
