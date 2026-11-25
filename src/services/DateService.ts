@@ -6,8 +6,8 @@ import User, { AuthUser } from '../models/User';
 import type { DateListQuery } from '../middleware/Joi';
 
 // Igual que en los votos: los usuarios del Date se devuelven con su nombre, su email y su foto, tambien
-// si estan inactivos (sin withInactive, el prehook de User los dejaria en null)
-const POPULATE_USERS = { path: 'users', select: 'name email photo', options: { withInactive: true } };
+// si estan inactivos (sin withInactive, el prehook de User los dejaria en null). Lo usa tambien el chat
+export const POPULATE_USERS ={ path: 'users', select: 'name email photo', options: { withInactive: true } };
 
 // El filtro que dice que Dates puede ver quien hace la peticion: el admin, todos; un usuario normal,
 // solo aquellos en los que el es uno de los dos (users contiene su id)
