@@ -130,6 +130,10 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 - [x] Campos nuevos (contactos de confianza, historial y cierre de los Dates) y paginación de 10 por página · Miguel Ángel
 - [x] Seed con datos de ejemplo de lo nuevo, Swagger y LOGS · Miguel Ángel
 
+#### Primer despliegue en Docker (`feat/docker`)
+
+- [x] Dockerfile de la API en dos etapas, sin dependencias de desarrollo y con el seed compilado · Diego
+
 ## Bitácora
 
 La bitácora del Seminario 7, de donde viene este código, se conserva en el tag `seminari7-base`
@@ -423,3 +427,20 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   eliminar un usuario con un Date y un Plan no queda ningún Plan huérfano. El login no devuelve los contactos de confianza. El documento de
   Swagger tiene los esquemas nuevos, el parámetro `X-Client` del login y los dos modos del refresh.
 - Prompt de IA usado: el del bloque "Estructura" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).
+
+### 2026-11-25 · Sprint 2: la imagen de Docker de la API (`feat/docker`)
+
+- `Dockerfile` en dos etapas, como en el Seminario 10: `node:24-alpine` compila el TypeScript y una segunda imagen limpia se queda solo
+  con `build/` y las dependencias de producción (312 MB; sin TypeScript ni tsx, y corre como el usuario `node`). `.dockerignore` deja fuera
+  `node_modules`, `build`, `.git`, la documentación y cualquier `.env`: la configuración llega en variables de entorno al arrancar.
+- A diferencia del seminario, el seed va dentro de la imagen, compilado (`build/seed.js`): así se llena la base de datos del servidor sin
+  tener el código allí. El compose del repo STUDATE---DOCKER lo ejecuta en cada arranque (solo inserta si la base está vacía).
+- Workflow de GitHub Actions (`.github/workflows/ci.yml`): lint y build en cada push y pull request; en los push, además, publica la imagen
+  en ghcr.io (`latest` desde `main` y `develop` desde `develop`). El paquete hay que ponerlo público una vez para que el servidor lo baje.
+- README: sección Docker, con cómo construir, ejecutar y sembrar.
+- Validación ejecutada: `docker build` sin errores; dentro de la imagen están `build/seed.js` y `build/server.js`, no están `tsx` ni
+  `typescript`, y el proceso corre como `node`. Con un MongoDB en una red de Docker sin puerto público: el seed crea todo (14 usuarios, 25
+  votos, 4 Dates, 3 Planes, 4 mensajes, 1 bloqueo, 2 partes y 2 alertas), `/ping` responde y el login de Laia deja la cookie con
+  `Path=/api/auth` y sin `Secure` (`REFRESH_COOKIE_PATH=/api/auth`, `COOKIE_SECURE=false`). El workflow no se ha podido ejecutar todavía:
+  lo hará el primer push.
+- Prompt de IA usado: el del bloque "Primer despliegue en Docker" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).
