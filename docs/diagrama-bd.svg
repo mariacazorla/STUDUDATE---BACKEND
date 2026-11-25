@@ -1,0 +1,571 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2368 2225" width="2368" height="2225" role="img" aria-label="Diagrama de clases de la base de datos de Studate por sprints"><style>
+text { font-family: 'DejaVu Sans', 'Segoe UI', system-ui, sans-serif; }
+.band-title { font-size: 20px; font-weight: 700; fill: #1f2330; letter-spacing: 0.04em; }
+.band-sub { font-size: 13px; font-weight: 600; }
+.band-sub-plain { font-size: 12px; fill: #666b77; }
+.cls-name { font-size: 15px; font-weight: 700; fill: #1f2330; }
+.cls-col { font-size: 10.5px; fill: #666b77; font-family: 'DejaVu Sans Mono', Consolas, monospace; }
+.cls-tag { font-size: 10px; font-weight: 700; fill: #fff; }
+.f, .f-pk, .f-fk, .f-idx, .f-op, .f-mod, .f-sub { font-size: 11px; font-family: 'DejaVu Sans Mono', Consolas, monospace; fill: #1f2330; }
+.f-pk { font-weight: 700; }
+.f-fk { fill: #6b3f9a; }
+.f-idx { fill: #1c6d6a; }
+.f-op { fill: #666b77; font-style: italic; }
+.f-mod { fill: #9a3b27; }
+.f-sub { font-weight: 700; }
+.ref-label { font-size: 10.5px; font-weight: 700; font-family: 'DejaVu Sans Mono', Consolas, monospace; }
+.note-title { font-size: 13px; font-weight: 700; }
+.note-line { font-size: 12px; fill: #333845; }
+.wish-name { font-size: 13px; font-weight: 700; fill: #6f6f68; font-family: 'DejaVu Sans Mono', Consolas, monospace; }
+.wish-desc { font-size: 11.5px; fill: #666b77; }
+</style><defs><marker id="arr-1d5a9e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d5a9e"/></marker><marker id="arr-c0306e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0306e"/></marker><marker id="arr-1f2330" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2330"/></marker><marker id="arr-7a4fa3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a4fa3"/></marker><marker id="arr-6b6b2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b6b2a"/></marker></defs><rect width="2368" height="2225" fill="#fbfbf8"/><rect x="16" y="30" width="2336" height="705" rx="12" fill="#e8f2ea" fill-opacity="0.45" stroke="#3a7d44" stroke-opacity="0.5"/>
+<rect x="16" y="30" width="10" height="705" rx="5" fill="#3a7d44"/>
+<text x="42.0" y="58.0" class="band-title" text-anchor="start">SPRINT 1 · hecho</text>
+<text x="42" y="78" class="band-sub" fill="#3a7d44">Núcleo del backoffice y Plan del Mínimo 1</text>
+<rect x="16" y="751" width="2336" height="461" rx="12" fill="#e9eaf6" fill-opacity="0.45" stroke="#3a3f8f" stroke-opacity="0.5"/>
+<rect x="16" y="751" width="10" height="461" rx="5" fill="#3a3f8f"/>
+<text x="42.0" y="779.0" class="band-title" text-anchor="start">SPRINT 2 · ahora · web y móvil</text>
+<text x="42" y="799" class="band-sub" fill="#3a3f8f">Chat del Date con su historial y seguridad</text>
+<text x="42" y="816" class="band-sub" fill="#3a3f8f">(conciencia digital)</text>
+<rect x="16" y="1228" width="2336" height="393" rx="12" fill="#fbf1e0" fill-opacity="0.45" stroke="#b4791f" stroke-opacity="0.5"/>
+<rect x="16" y="1228" width="10" height="393" rx="5" fill="#b4791f"/>
+<text x="42.0" y="1256.0" class="band-title" text-anchor="start">SPRINT 3 · el móvil de verdad</text>
+<text x="42" y="1276" class="band-sub" fill="#b4791f">Sesiones, Cambio de Aula con mapa y avisos</text>
+<rect x="16" y="1637" width="2336" height="308" rx="12" fill="#f8e9e5" fill-opacity="0.45" stroke="#9a3b27" stroke-opacity="0.5"/>
+<rect x="16" y="1637" width="10" height="308" rx="5" fill="#9a3b27"/>
+<text x="42.0" y="1665.0" class="band-title" text-anchor="start">ENTREGA FINAL</text>
+<text x="42" y="1685" class="band-sub" fill="#9a3b27">OAuth con el correo de la universidad</text>
+<rect x="16" y="1961" width="2336" height="238" rx="12" fill="#f2f2ee" fill-opacity="0.45" stroke="#8c8c85" stroke-opacity="0.5" stroke-dasharray="6 5"/>
+<rect x="16" y="1961" width="10" height="238" rx="5" fill="#8c8c85"/>
+<text x="42.0" y="1989.0" class="band-title" text-anchor="start">FUERA DE ALCANCE</text>
+<text x="42" y="2009" class="band-sub" fill="#8c8c85">Deseos del blog, sin modelo hasta que se</text>
+<text x="42" y="2026" class="band-sub" fill="#8c8c85">decidan</text>
+<rect x="1992" y="154" width="330" height="84" rx="8" fill="#fff" stroke="#e4e2d8"/>
+<rect x="1992" y="154" width="4" height="84" fill="#3a7d44"/>
+<text x="2008" y="174" class="note-title" fill="#3a7d44">Qué cambia en este sprint</text>
+<text x="2008.0" y="194.0" class="note-line" text-anchor="start">User, Grade y Date: el backoffice del Sprint 1.</text>
+<text x="2008.0" y="212.0" class="note-line" text-anchor="start">Plan con sus tiradas (Spin): Mínimo 1.</text>
+<text x="2008.0" y="230.0" class="note-line" text-anchor="start">Borrado suave en User y Plan (deleted).</text>
+<rect x="1992" y="875" width="330" height="120" rx="8" fill="#fff" stroke="#e4e2d8"/>
+<rect x="1992" y="875" width="4" height="120" fill="#3a3f8f"/>
+<text x="2008" y="895" class="note-title" fill="#3a3f8f">Qué cambia en este sprint</text>
+<text x="2008.0" y="915.0" class="note-line" text-anchor="start">Nuevos: Message, Block, Report, SafetyAlert.</text>
+<text x="2008.0" y="933.0" class="note-line" text-anchor="start">User + trustedContacts (opcionales).</text>
+<text x="2008.0" y="951.0" class="note-line" text-anchor="start">Date + startedAt, closedAt, closedReason e history.</text>
+<text x="2008.0" y="969.0" class="note-line" text-anchor="start">Report: gravedad y resolución, solo para el admin.</text>
+<text x="2008.0" y="987.0" class="note-line" text-anchor="start">Grade + índice para el cupo de 30 A+.</text>
+<rect x="1992" y="1352" width="330" height="120" rx="8" fill="#fff" stroke="#e4e2d8"/>
+<rect x="1992" y="1352" width="4" height="120" fill="#b4791f"/>
+<text x="2008" y="1372" class="note-title" fill="#b4791f">Qué cambia en este sprint</text>
+<text x="2008.0" y="1392.0" class="note-line" text-anchor="start">Nuevos: Session y Place.</text>
+<text x="2008.0" y="1410.0" class="note-line" text-anchor="start">Plan: la tirada apunta a un Place; + confirmedBy,</text>
+<text x="2008.0" y="1428.0" class="note-line" text-anchor="start">  sharedWith y safetyCheckAt.</text>
+<text x="2008.0" y="1446.0" class="note-line" text-anchor="start">SafetyAlert + location y el tipo checkin.</text>
+<text x="2008.0" y="1464.0" class="note-line" text-anchor="start">User + pushTokens.</text>
+<rect x="1992" y="1761" width="330" height="84" rx="8" fill="#fff" stroke="#e4e2d8"/>
+<rect x="1992" y="1761" width="4" height="84" fill="#9a3b27"/>
+<text x="2008" y="1781" class="note-title" fill="#9a3b27">Qué cambia en este sprint</text>
+<text x="2008.0" y="1801.0" class="note-line" text-anchor="start">Nuevo: University.</text>
+<text x="2008.0" y="1819.0" class="note-line" text-anchor="start">User + university, provider, googleId,</text>
+<text x="2008.0" y="1837.0" class="note-line" text-anchor="start">  hiddenEmails; password opcional con Google.</text>
+<rect x="530" y="2085" width="262" height="78" rx="8" fill="#fff" stroke="#8c8c85" stroke-dasharray="5 4"/>
+<text x="542.0" y="2109.0" class="wish-name" text-anchor="start">CheckIn</text>
+<text x="542.0" y="2131.0" class="wish-desc" text-anchor="start">Check-in en una zona del campus;</text>
+<text x="542.0" y="2147.0" class="wish-desc" text-anchor="start">caduca a las 4 h</text>
+<rect x="808" y="2085" width="262" height="78" rx="8" fill="#fff" stroke="#8c8c85" stroke-dasharray="5 4"/>
+<text x="820.0" y="2109.0" class="wish-name" text-anchor="start">LevelTest</text>
+<text x="820.0" y="2131.0" class="wish-desc" text-anchor="start">Prueba de Nivel: 15 min a ciegas a</text>
+<text x="820.0" y="2147.0" class="wish-desc" text-anchor="start">las 22:00</text>
+<rect x="1086" y="2085" width="262" height="78" rx="8" fill="#fff" stroke="#8c8c85" stroke-dasharray="5 4"/>
+<text x="1098.0" y="2109.0" class="wish-name" text-anchor="start">Proposal · Vote</text>
+<text x="1098.0" y="2131.0" class="wish-desc" text-anchor="start">La Asamblea: propuestas y votos</text>
+<text x="1098.0" y="2147.0" class="wish-desc" text-anchor="start">semanales</text>
+<rect x="1364" y="2085" width="262" height="78" rx="8" fill="#fff" stroke="#8c8c85" stroke-dasharray="5 4"/>
+<text x="1376.0" y="2109.0" class="wish-name" text-anchor="start">Exchange</text>
+<text x="1376.0" y="2131.0" class="wish-desc" text-anchor="start">Movilidad: destino y fechas de</text>
+<text x="1376.0" y="2147.0" class="wish-desc" text-anchor="start">Erasmus</text>
+<rect x="1642" y="2085" width="262" height="78" rx="8" fill="#fff" stroke="#8c8c85" stroke-dasharray="5 4"/>
+<text x="1654.0" y="2109.0" class="wish-name" text-anchor="start">Game</text>
+<text x="1654.0" y="2131.0" class="wish-desc" text-anchor="start">Trabajo en Grupo: Tres en Raya,</text>
+<text x="1654.0" y="2147.0" class="wish-desc" text-anchor="start">Examen Oral</text>
+<rect x="1920" y="2085" width="262" height="78" rx="8" fill="#fff" stroke="#8c8c85" stroke-dasharray="5 4"/>
+<text x="1932.0" y="2109.0" class="wish-name" text-anchor="start">HonorRoll</text>
+<text x="1932.0" y="2131.0" class="wish-desc" text-anchor="start">Cuadro de Honor: top 10 semanal</text>
+<text x="42.0" y="2109.0" class="band-sub-plain" text-anchor="start">Se podrían añadir</text>
+<text x="42.0" y="2127.0" class="band-sub-plain" text-anchor="start">sin tocar el resto:</text>
+<text x="42.0" y="2145.0" class="band-sub-plain" text-anchor="start">todos apuntan a User.</text>
+<line x1="486" y1="128.0" x2="486" y2="1326.0" stroke="#6b6b2a" stroke-width="2.2"/>
+<line x1="472" y1="118.0" x2="472" y2="839.0" stroke="#c0306e" stroke-width="2.2"/>
+<line x1="458" y1="108.0" x2="458" y2="829.0" stroke="#1d5a9e" stroke-width="2.2"/>
+<line x1="444" y1="566.5" x2="444" y2="1705.0" stroke="#1f2330" stroke-width="2.2"/>
+<line x1="430" y1="88.0" x2="430" y2="1286.0" stroke="#7a4fa3" stroke-width="2.2"/>
+<line x1="548.0" y1="154.0" x2="548.0" y2="88.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<line x1="548.0" y1="88.0" x2="430.0" y2="88.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<circle cx="430.0" cy="88.0" r="2.6" fill="#7a4fa3"/>
+<line x1="839.0" y1="154.0" x2="839.0" y2="88.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<line x1="839.0" y1="88.0" x2="430.0" y2="88.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<circle cx="430.0" cy="88.0" r="2.6" fill="#7a4fa3"/>
+<line x1="1262.0" y1="154.0" x2="1262.0" y2="108.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<line x1="1262.0" y1="108.0" x2="458.0" y2="108.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<circle cx="458.0" cy="108.0" r="2.6" fill="#1d5a9e"/>
+<line x1="1343.0" y1="154.0" x2="1343.0" y2="128.0" stroke="#6b6b2a" stroke-width="1.6"/>
+<line x1="1343.0" y1="128.0" x2="486.0" y2="128.0" stroke="#6b6b2a" stroke-width="1.6"/>
+<circle cx="486.0" cy="128.0" r="2.6" fill="#6b6b2a"/>
+<line x1="1430.5" y1="154.0" x2="1430.5" y2="88.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<line x1="1430.5" y1="88.0" x2="430.0" y2="88.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<circle cx="430.0" cy="88.0" r="2.6" fill="#7a4fa3"/>
+<line x1="548.0" y1="875.0" x2="548.0" y2="829.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<line x1="548.0" y1="829.0" x2="458.0" y2="829.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<circle cx="458.0" cy="829.0" r="2.6" fill="#1d5a9e"/>
+<line x1="609.5" y1="875.0" x2="609.5" y2="809.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<line x1="609.5" y1="809.0" x2="430.0" y2="809.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<circle cx="430.0" cy="809.0" r="2.6" fill="#7a4fa3"/>
+<line x1="838.0" y1="875.0" x2="838.0" y2="809.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<line x1="838.0" y1="809.0" x2="430.0" y2="809.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<circle cx="430.0" cy="809.0" r="2.6" fill="#7a4fa3"/>
+<line x1="1129.0" y1="875.0" x2="1129.0" y2="809.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<line x1="1129.0" y1="809.0" x2="430.0" y2="809.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<circle cx="430.0" cy="809.0" r="2.6" fill="#7a4fa3"/>
+<line x1="1353.0" y1="875.0" x2="1353.0" y2="829.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<line x1="1353.0" y1="829.0" x2="458.0" y2="829.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<circle cx="458.0" cy="829.0" r="2.6" fill="#1d5a9e"/>
+<line x1="1645.0" y1="875.0" x2="1645.0" y2="809.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<line x1="1645.0" y1="809.0" x2="430.0" y2="809.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<circle cx="430.0" cy="809.0" r="2.6" fill="#7a4fa3"/>
+<line x1="1771.5" y1="875.0" x2="1771.5" y2="829.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<line x1="1771.5" y1="829.0" x2="458.0" y2="829.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<circle cx="458.0" cy="829.0" r="2.6" fill="#1d5a9e"/>
+<line x1="1820.0" y1="875.0" x2="1820.0" y2="839.0" stroke="#c0306e" stroke-width="1.6"/>
+<line x1="1820.0" y1="839.0" x2="472.0" y2="839.0" stroke="#c0306e" stroke-width="1.6"/>
+<circle cx="472.0" cy="839.0" r="2.6" fill="#c0306e"/>
+<line x1="548.0" y1="1352.0" x2="548.0" y2="1286.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<line x1="548.0" y1="1286.0" x2="430.0" y2="1286.0" stroke="#7a4fa3" stroke-width="1.6"/>
+<circle cx="430.0" cy="1286.0" r="2.6" fill="#7a4fa3"/>
+<line x1="458.0" y1="108.0" x2="1170.0" y2="108.0" stroke="#1d5a9e" stroke-width="1.6"/>
+<line x1="1170.0" y1="108.0" x2="1170.0" y2="153.0" stroke="#1d5a9e" stroke-width="1.6" marker-end="url(#arr-1d5a9e)"/>
+<circle cx="458.0" cy="108.0" r="2.6" fill="#1d5a9e"/>
+<line x1="472.0" y1="118.0" x2="1567.0" y2="118.0" stroke="#c0306e" stroke-width="1.6"/>
+<line x1="1567.0" y1="118.0" x2="1567.0" y2="153.0" stroke="#c0306e" stroke-width="1.6" marker-end="url(#arr-c0306e)"/>
+<circle cx="472.0" cy="118.0" r="2.6" fill="#c0306e"/>
+<line x1="486.0" y1="1326.0" x2="1224.0" y2="1326.0" stroke="#6b6b2a" stroke-width="1.6"/>
+<line x1="1224.0" y1="1326.0" x2="1224.0" y2="1351.0" stroke="#6b6b2a" stroke-width="1.6" marker-end="url(#arr-6b6b2a)"/>
+<circle cx="486.0" cy="1326.0" r="2.6" fill="#6b6b2a"/>
+<line x1="444.0" y1="1705.0" x2="827.0" y2="1705.0" stroke="#1f2330" stroke-width="1.6"/>
+<line x1="827.0" y1="1705.0" x2="827.0" y2="1760.0" stroke="#1f2330" stroke-width="1.6" marker-end="url(#arr-1f2330)"/>
+<circle cx="444.0" cy="1705.0" r="2.6" fill="#1f2330"/>
+<line x1="430.0" y1="174.0" x2="401.0" y2="174.0" stroke="#7a4fa3" stroke-width="1.6" marker-end="url(#arr-7a4fa3)"/>
+<circle cx="430.0" cy="174.0" r="2.6" fill="#7a4fa3"/>
+<line x1="400.0" y1="566.5" x2="444.0" y2="566.5" stroke="#1f2330" stroke-width="1.6"/>
+<circle cx="444.0" cy="566.5" r="2.6" fill="#1f2330"/>
+<text x="553.0" y="148.0" class="ref-label" fill="#7a4fa3">from · to  *</text>
+<text x="844.0" y="148.0" class="ref-label" fill="#7a4fa3">users [2] · firstTurn</text>
+<text x="1267.0" y="148.0" class="ref-label" fill="#1d5a9e">date  0..1</text>
+<text x="1348.0" y="148.0" class="ref-label" fill="#6b6b2a">spins.place</text>
+<text x="1435.5" y="148.0" class="ref-label" fill="#7a4fa3">confirmedBy</text>
+<text x="553.0" y="869.0" class="ref-label" fill="#1d5a9e">date  *</text>
+<text x="614.5" y="869.0" class="ref-label" fill="#7a4fa3">from</text>
+<text x="843.0" y="869.0" class="ref-label" fill="#7a4fa3">blocker · blocked</text>
+<text x="1134.0" y="869.0" class="ref-label" fill="#7a4fa3">reporter · reported · reviewedBy</text>
+<text x="1358.0" y="869.0" class="ref-label" fill="#1d5a9e">date?</text>
+<text x="1650.0" y="869.0" class="ref-label" fill="#7a4fa3">user · attendedBy</text>
+<text x="1776.5" y="869.0" class="ref-label" fill="#1d5a9e">date?</text>
+<text x="1825.0" y="869.0" class="ref-label" fill="#c0306e">plan?</text>
+<text x="553.0" y="1346.0" class="ref-label" fill="#7a4fa3">user  *</text>
+<text x="1176.0" y="148.0" class="ref-label" fill="#1d5a9e">1</text>
+<text x="1573.0" y="148.0" class="ref-label" fill="#c0306e">1</text>
+<text x="1230.0" y="1346.0" class="ref-label" fill="#6b6b2a">1</text>
+<text x="833.0" y="1755.0" class="ref-label" fill="#1f2330">1</text>
+<text x="408.0" y="168.0" class="ref-label" fill="#7a4fa3">1</text>
+<text x="408.0" y="561.5" class="ref-label" fill="#1f2330">0..1</text>
+<g class="cls">
+<rect x="40" y="154" width="360" height="547" rx="7" fill="#fff" stroke="#3a7d44" stroke-width="1.6"/>
+<path d="M40 161 a7 7 0 0 1 7 -7 h346 a7 7 0 0 1 7 7 v33 h-360 z" fill="#e8f2ea" stroke="#3a7d44" stroke-width="1.6"/>
+<text x="52.0" y="172.0" class="cls-name" text-anchor="start">User</text>
+<text x="52.0" y="187.0" class="cls-col" text-anchor="start">colección: users</text>
+<rect x="326.4" y="163" width="65.6" height="18" rx="9" fill="#3a7d44"/>
+<text x="359.2" y="176.0" class="cls-tag" text-anchor="middle">Sprint 1</text>
+<rect x="46" y="197" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="207.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="46" y="214" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="224.0" class="f" text-anchor="start">name: String</text>
+<rect x="46" y="231" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="241.0" class="f" text-anchor="start">email: String · único · en minúsculas</text>
+<rect x="46" y="248" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="258.0" class="f" text-anchor="start">password: String · scrypt · select: false</text>
+<rect x="46" y="265" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="56.0" y="275.0" class="f-mod" text-anchor="start">~ password: opcional si provider = &#x27;google&#x27;</text>
+<rect x="46" y="282" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="292.0" class="f" text-anchor="start">role: &#x27;user&#x27; | &#x27;admin&#x27;</text>
+<rect x="46" y="299" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="309.0" class="f" text-anchor="start">birthDate?: Date</text>
+<rect x="46" y="316" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="326.0" class="f" text-anchor="start">degree?: String</text>
+<rect x="46" y="333" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="343.0" class="f" text-anchor="start">lookingFor?: String · ≤100</text>
+<rect x="46" y="350" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="360.0" class="f" text-anchor="start">bio?: String · ≤500</text>
+<rect x="46" y="367" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="377.0" class="f" text-anchor="start">photo?: String · base64 · ≤200 KB</text>
+<rect x="46" y="384" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="394.0" class="f" text-anchor="start">active: Boolean</text>
+<rect x="46" y="401" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="411.0" class="f" text-anchor="start">deleted: Boolean</text>
+<rect x="46" y="418" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="428.0" class="f" text-anchor="start">deletedAt?: Date</text>
+<rect x="46" y="435" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="445.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="46" y="452" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="462.0" class="f" text-anchor="start">updatedAt: Date</text>
+<rect x="46" y="469" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="56.0" y="479.0" class="f-sub" text-anchor="start">◆ trustedContacts: [TrustedContact] · opcional · ≤3</text>
+<rect x="46" y="486" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="70.0" y="496.0" class="f" text-anchor="start">name: String</text>
+<rect x="46" y="503" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="70.0" y="513.0" class="f" text-anchor="start">email: String</text>
+<rect x="46" y="520" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="70.0" y="530.0" class="f" text-anchor="start">phone?: String</text>
+<rect x="62" y="483" width="328" height="53" rx="5" fill="none" stroke="#3a3f8f" stroke-dasharray="3 3"/>
+<rect x="46" y="543" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="56.0" y="553.0" class="f" text-anchor="start">pushTokens: [String] · avisos al móvil</text>
+<rect x="46" y="560" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="56.0" y="570.0" class="f-fk" text-anchor="start">university?: ObjectId → University</text>
+<rect x="46" y="577" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="56.0" y="587.0" class="f" text-anchor="start">provider: &#x27;local&#x27; | &#x27;google&#x27;</text>
+<rect x="46" y="594" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="56.0" y="604.0" class="f" text-anchor="start">googleId?: String · único</text>
+<rect x="46" y="611" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="56.0" y="621.0" class="f" text-anchor="start">hiddenEmails: [String] · ≤20 · &quot;que no me vean&quot;</text>
+<rect x="46" y="628" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="638.0" class="f-idx" text-anchor="start">« índice único (email) »</text>
+<rect x="46" y="645" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="56.0" y="655.0" class="f-idx" text-anchor="start">« índice único disperso (googleId) »</text>
+<line x1="40" y1="660" x2="400" y2="660" stroke="#dcdad0"/>
+<rect x="46" y="662" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="672.0" class="f-op" text-anchor="start">pre(find): solo active y no deleted</text>
+<rect x="46" y="679" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="56.0" y="689.0" class="f-op" text-anchor="start">pre(save): hash del password (scrypt)</text>
+</g>
+<g class="cls">
+<rect x="530" y="154" width="251" height="218" rx="7" fill="#fff" stroke="#3a7d44" stroke-width="1.6"/>
+<path d="M530 161 a7 7 0 0 1 7 -7 h237 a7 7 0 0 1 7 7 v33 h-251 z" fill="#e8f2ea" stroke="#3a7d44" stroke-width="1.6"/>
+<text x="542.0" y="172.0" class="cls-name" text-anchor="start">Grade</text>
+<text x="542.0" y="187.0" class="cls-col" text-anchor="start">colección: grades</text>
+<rect x="707.4" y="163" width="65.6" height="18" rx="9" fill="#3a7d44"/>
+<text x="740.2" y="176.0" class="cls-tag" text-anchor="middle">Sprint 1</text>
+<rect x="536" y="197" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="546.0" y="207.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="536" y="214" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="546.0" y="224.0" class="f-fk" text-anchor="start">from: ObjectId → User</text>
+<rect x="536" y="231" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="546.0" y="241.0" class="f-fk" text-anchor="start">to: ObjectId → User</text>
+<rect x="536" y="248" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="546.0" y="258.0" class="f" text-anchor="start">value: &#x27;A+&#x27; | &#x27;F&#x27;</text>
+<rect x="536" y="265" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="546.0" y="275.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="536" y="282" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="546.0" y="292.0" class="f" text-anchor="start">updatedAt: Date</text>
+<rect x="536" y="299" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="546.0" y="309.0" class="f-idx" text-anchor="start">« índice único (from, to) »</text>
+<rect x="536" y="316" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="326.0" class="f-idx" text-anchor="start">« índice (from, value, createdAt) »</text>
+<line x1="530" y1="331" x2="781" y2="331" stroke="#dcdad0"/>
+<rect x="536" y="333" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="343.0" class="f-op" text-anchor="start">cupo: 30 A+ al día</text>
+<rect x="536" y="350" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="360.0" class="f-op" text-anchor="start">deshacer: solo si tiene &lt; 10 s</text>
+</g>
+<g class="cls">
+<rect x="821" y="154" width="383" height="377" rx="7" fill="#fff" stroke="#3a7d44" stroke-width="1.6"/>
+<path d="M821 161 a7 7 0 0 1 7 -7 h369 a7 7 0 0 1 7 7 v33 h-383 z" fill="#e8f2ea" stroke="#3a7d44" stroke-width="1.6"/>
+<text x="833.0" y="172.0" class="cls-name" text-anchor="start">Date</text>
+<text x="833.0" y="187.0" class="cls-col" text-anchor="start">colección: dates</text>
+<rect x="1130.4" y="163" width="65.6" height="18" rx="9" fill="#3a7d44"/>
+<text x="1163.2" y="176.0" class="cls-tag" text-anchor="middle">Sprint 1</text>
+<rect x="827" y="197" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="207.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="827" y="214" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="224.0" class="f-fk" text-anchor="start">users: [ObjectId → User] · exactamente 2</text>
+<rect x="827" y="231" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="241.0" class="f" text-anchor="start">status: &#x27;pending&#x27; | &#x27;ongoing&#x27; | &#x27;closed&#x27;</text>
+<rect x="827" y="248" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="258.0" class="f-fk" text-anchor="start">firstTurn: ObjectId → User</text>
+<rect x="827" y="265" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="275.0" class="f" text-anchor="start">expiresAt: Date · 24 h</text>
+<rect x="827" y="282" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="292.0" class="f" text-anchor="start">extended: Boolean · una prórroga</text>
+<rect x="827" y="299" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="309.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="827" y="316" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="326.0" class="f" text-anchor="start">updatedAt: Date</text>
+<rect x="827" y="333" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="837.0" y="343.0" class="f" text-anchor="start">startedAt?: Date · primer mensaje</text>
+<rect x="827" y="350" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="837.0" y="360.0" class="f" text-anchor="start">closedAt?: Date</text>
+<rect x="827" y="367" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="837.0" y="377.0" class="f" text-anchor="start">closedReason?: &#x27;expired&#x27; | &#x27;blocked&#x27; | &#x27;admin&#x27;</text>
+<rect x="827" y="384" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="837.0" y="394.0" class="f-sub" text-anchor="start">◆ history: [DateEvent] · cada cambio de estado</text>
+<rect x="827" y="401" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="851.0" y="411.0" class="f" text-anchor="start">status: &#x27;pending&#x27; | &#x27;ongoing&#x27; | &#x27;closed&#x27;</text>
+<rect x="827" y="418" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="851.0" y="428.0" class="f" text-anchor="start">by?: ObjectId → User · vacío: lo hizo el servidor</text>
+<rect x="827" y="435" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="851.0" y="445.0" class="f" text-anchor="start">reason?: String</text>
+<rect x="827" y="452" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="851.0" y="462.0" class="f" text-anchor="start">at: Date</text>
+<rect x="843" y="398" width="351" height="70" rx="5" fill="none" stroke="#3a3f8f" stroke-dasharray="3 3"/>
+<rect x="827" y="475" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="837.0" y="485.0" class="f-idx" text-anchor="start">« índice (status, expiresAt) »</text>
+<line x1="821" y1="490" x2="1204" y2="490" stroke="#dcdad0"/>
+<rect x="827" y="492" width="4" height="12" rx="2" fill="#3a7d44"/>
+<text x="837.0" y="502.0" class="f-op" text-anchor="start">se crea solo con el A+ mutuo</text>
+<rect x="827" y="509" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="837.0" y="519.0" class="f-op" text-anchor="start">job: cierra los caducados</text>
+</g>
+<g class="cls">
+<rect x="1244" y="154" width="357" height="360" rx="7" fill="#fff" stroke="#2a7f7a" stroke-width="1.6"/>
+<path d="M1244 161 a7 7 0 0 1 7 -7 h343 a7 7 0 0 1 7 7 v33 h-357 z" fill="#e4f1f0" stroke="#2a7f7a" stroke-width="1.6"/>
+<text x="1256.0" y="172.0" class="cls-name" text-anchor="start">Plan</text>
+<text x="1256.0" y="187.0" class="cls-col" text-anchor="start">colección: plans</text>
+<rect x="1527.4" y="163" width="65.6" height="18" rx="9" fill="#2a7f7a"/>
+<text x="1560.2" y="176.0" class="cls-tag" text-anchor="middle">Mínimo 1</text>
+<rect x="1250" y="197" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="207.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="1250" y="214" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="224.0" class="f-fk" text-anchor="start">date: ObjectId → Date · único</text>
+<rect x="1250" y="231" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="241.0" class="f" text-anchor="start">status: &#x27;proposing&#x27; | &#x27;confirmed&#x27; | &#x27;cancelled&#x27;</text>
+<rect x="1250" y="248" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="258.0" class="f-sub" text-anchor="start">◆ spins: [Spin] · de 1 a 3</text>
+<rect x="1250" y="265" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1274.0" y="275.0" class="f" text-anchor="start">place: String</text>
+<rect x="1250" y="282" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="1274.0" y="292.0" class="f-mod" text-anchor="start">~ place: pasa a ObjectId → Place</text>
+<rect x="1250" y="299" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1274.0" y="309.0" class="f" text-anchor="start">walkingMinutes: Number · 0..120</text>
+<rect x="1250" y="316" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1274.0" y="326.0" class="f" text-anchor="start">scheduledAt: Date</text>
+<rect x="1250" y="333" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1274.0" y="343.0" class="f" text-anchor="start">accepted: Boolean · solo una</text>
+<rect x="1266" y="262" width="325" height="87" rx="5" fill="none" stroke="#2a7f7a" stroke-dasharray="3 3"/>
+<rect x="1250" y="356" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="366.0" class="f" text-anchor="start">deleted: Boolean</text>
+<rect x="1250" y="373" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="383.0" class="f" text-anchor="start">deletedAt?: Date</text>
+<rect x="1250" y="390" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="400.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="1250" y="407" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="417.0" class="f" text-anchor="start">updatedAt: Date</text>
+<rect x="1250" y="424" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="1260.0" y="434.0" class="f-fk" text-anchor="start">confirmedBy: [ObjectId → User] · los dos</text>
+<rect x="1250" y="441" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="1260.0" y="451.0" class="f" text-anchor="start">sharedWith: [String] · correos de confianza</text>
+<rect x="1250" y="458" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="1260.0" y="468.0" class="f" text-anchor="start">safetyCheckAt?: Date · 3 h después</text>
+<rect x="1250" y="475" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="485.0" class="f-idx" text-anchor="start">« índice único (date) »</text>
+<line x1="1244" y1="490" x2="1601" y2="490" stroke="#dcdad0"/>
+<rect x="1250" y="492" width="4" height="12" rx="2" fill="#2a7f7a"/>
+<text x="1260.0" y="502.0" class="f-op" text-anchor="start">de 1 a 3 tiradas y una sola aceptada</text>
+</g>
+<g class="cls">
+<rect x="530" y="875" width="250" height="184" rx="7" fill="#fff" stroke="#3a3f8f" stroke-width="1.6"/>
+<path d="M530 882 a7 7 0 0 1 7 -7 h236 a7 7 0 0 1 7 7 v33 h-250 z" fill="#e9eaf6" stroke="#3a3f8f" stroke-width="1.6"/>
+<text x="542.0" y="893.0" class="cls-name" text-anchor="start">Message</text>
+<text x="542.0" y="908.0" class="cls-col" text-anchor="start">colección: messages</text>
+<rect x="706.4" y="884" width="65.6" height="18" rx="9" fill="#3a3f8f"/>
+<text x="739.2" y="897.0" class="cls-tag" text-anchor="middle">Sprint 2</text>
+<rect x="536" y="918" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="928.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="536" y="935" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="945.0" class="f-fk" text-anchor="start">date: ObjectId → Date</text>
+<rect x="536" y="952" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="962.0" class="f-fk" text-anchor="start">from: ObjectId → User</text>
+<rect x="536" y="969" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="979.0" class="f" text-anchor="start">text: String · ≤1000</text>
+<rect x="536" y="986" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="996.0" class="f" text-anchor="start">readAt?: Date</text>
+<rect x="536" y="1003" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="1013.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="536" y="1020" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="1030.0" class="f-idx" text-anchor="start">« índice (date, createdAt) »</text>
+<line x1="530" y1="1035" x2="780" y2="1035" stroke="#dcdad0"/>
+<rect x="536" y="1037" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="546.0" y="1047.0" class="f-op" text-anchor="start">solo escribe a quien le toca</text>
+</g>
+<g class="cls">
+<rect x="820" y="875" width="251" height="150" rx="7" fill="#fff" stroke="#3a3f8f" stroke-width="1.6"/>
+<path d="M820 882 a7 7 0 0 1 7 -7 h237 a7 7 0 0 1 7 7 v33 h-251 z" fill="#e9eaf6" stroke="#3a3f8f" stroke-width="1.6"/>
+<text x="832.0" y="893.0" class="cls-name" text-anchor="start">Block</text>
+<text x="832.0" y="908.0" class="cls-col" text-anchor="start">colección: blocks</text>
+<rect x="997.4" y="884" width="65.6" height="18" rx="9" fill="#3a3f8f"/>
+<text x="1030.2" y="897.0" class="cls-tag" text-anchor="middle">Sprint 2</text>
+<rect x="826" y="918" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="836.0" y="928.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="826" y="935" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="836.0" y="945.0" class="f-fk" text-anchor="start">blocker: ObjectId → User</text>
+<rect x="826" y="952" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="836.0" y="962.0" class="f-fk" text-anchor="start">blocked: ObjectId → User</text>
+<rect x="826" y="969" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="836.0" y="979.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="826" y="986" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="836.0" y="996.0" class="f-idx" text-anchor="start">« índice único (blocker, blocked) »</text>
+<line x1="820" y1="1001" x2="1071" y2="1001" stroke="#dcdad0"/>
+<rect x="826" y="1003" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="836.0" y="1013.0" class="f-op" text-anchor="start">La Orla y los chats lo excluyen</text>
+</g>
+<g class="cls">
+<rect x="1111" y="875" width="476" height="303" rx="7" fill="#fff" stroke="#3a3f8f" stroke-width="1.6"/>
+<path d="M1111 882 a7 7 0 0 1 7 -7 h462 a7 7 0 0 1 7 7 v33 h-476 z" fill="#e9eaf6" stroke="#3a3f8f" stroke-width="1.6"/>
+<text x="1123.0" y="893.0" class="cls-name" text-anchor="start">Report</text>
+<text x="1123.0" y="908.0" class="cls-col" text-anchor="start">colección: reports</text>
+<rect x="1513.4" y="884" width="65.6" height="18" rx="9" fill="#3a3f8f"/>
+<text x="1546.2" y="897.0" class="cls-tag" text-anchor="middle">Sprint 2</text>
+<rect x="1117" y="918" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="928.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="1117" y="935" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="945.0" class="f-fk" text-anchor="start">reporter: ObjectId → User</text>
+<rect x="1117" y="952" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="962.0" class="f-fk" text-anchor="start">reported: ObjectId → User</text>
+<rect x="1117" y="969" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="979.0" class="f-fk" text-anchor="start">date?: ObjectId → Date</text>
+<rect x="1117" y="986" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="996.0" class="f" text-anchor="start">reason: &#x27;harassment&#x27; | &#x27;fake_profile&#x27; | &#x27;inappropriate&#x27; | &#x27;other&#x27;</text>
+<rect x="1117" y="1003" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1013.0" class="f" text-anchor="start">text?: String · ≤500</text>
+<rect x="1117" y="1020" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1030.0" class="f" text-anchor="start">status: &#x27;open&#x27; | &#x27;reviewed&#x27; | &#x27;dismissed&#x27;</text>
+<rect x="1117" y="1037" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1047.0" class="f" text-anchor="start">severity?: &#x27;low&#x27; | &#x27;medium&#x27; | &#x27;high&#x27; · la pone el admin</text>
+<rect x="1117" y="1054" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1064.0" class="f" text-anchor="start">resolution?: String · ≤500 · lo que hizo el admin</text>
+<rect x="1117" y="1071" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1081.0" class="f-fk" text-anchor="start">reviewedBy?: ObjectId → User · admin</text>
+<rect x="1117" y="1088" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1098.0" class="f" text-anchor="start">reviewedAt?: Date</text>
+<rect x="1117" y="1105" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1115.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="1117" y="1122" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1132.0" class="f" text-anchor="start">updatedAt: Date</text>
+<line x1="1111" y1="1137" x2="1587" y2="1137" stroke="#dcdad0"/>
+<rect x="1117" y="1139" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1149.0" class="f-op" text-anchor="start">solo lo ve y lo revisa un admin</text>
+<rect x="1117" y="1156" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1127.0" y="1166.0" class="f-op" text-anchor="start">nada automático por ahora</text>
+</g>
+<g class="cls">
+<rect x="1627" y="875" width="331" height="286" rx="7" fill="#fff" stroke="#3a3f8f" stroke-width="1.6"/>
+<path d="M1627 882 a7 7 0 0 1 7 -7 h317 a7 7 0 0 1 7 7 v33 h-331 z" fill="#e9eaf6" stroke="#3a3f8f" stroke-width="1.6"/>
+<text x="1639.0" y="893.0" class="cls-name" text-anchor="start">SafetyAlert</text>
+<text x="1639.0" y="908.0" class="cls-col" text-anchor="start">colección: safetyalerts</text>
+<rect x="1884.4" y="884" width="65.6" height="18" rx="9" fill="#3a3f8f"/>
+<text x="1917.2" y="897.0" class="cls-tag" text-anchor="middle">Sprint 2</text>
+<rect x="1633" y="918" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="928.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="1633" y="935" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="945.0" class="f-fk" text-anchor="start">user: ObjectId → User</text>
+<rect x="1633" y="952" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="962.0" class="f-fk" text-anchor="start">date?: ObjectId → Date</text>
+<rect x="1633" y="969" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="979.0" class="f-fk" text-anchor="start">plan?: ObjectId → Plan</text>
+<rect x="1633" y="986" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="996.0" class="f" text-anchor="start">type: &#x27;sos&#x27;</text>
+<rect x="1633" y="1003" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="1643.0" y="1013.0" class="f-mod" text-anchor="start">~ type: + &#x27;checkin&#x27; (no contesta)</text>
+<rect x="1633" y="1020" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="1030.0" class="f" text-anchor="start">message?: String · ≤300</text>
+<rect x="1633" y="1037" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="1047.0" class="f" text-anchor="start">status: &#x27;open&#x27; | &#x27;attended&#x27; | &#x27;false_alarm&#x27;</text>
+<rect x="1633" y="1054" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="1064.0" class="f-fk" text-anchor="start">attendedBy?: ObjectId → User · admin</text>
+<rect x="1633" y="1071" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="1081.0" class="f" text-anchor="start">attendedAt?: Date</text>
+<rect x="1633" y="1088" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="1098.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="1633" y="1105" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="1115.0" class="f" text-anchor="start">updatedAt: Date</text>
+<rect x="1633" y="1122" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="1643.0" y="1132.0" class="f" text-anchor="start">location?: GeoJSON Point · desde el móvil</text>
+<line x1="1627" y1="1137" x2="1958" y2="1137" stroke="#dcdad0"/>
+<rect x="1633" y="1139" width="4" height="12" rx="2" fill="#3a3f8f"/>
+<text x="1643.0" y="1149.0" class="f-op" text-anchor="start">avisa a los contactos y a los admins</text>
+</g>
+<g class="cls">
+<rect x="530" y="1352" width="278" height="201" rx="7" fill="#fff" stroke="#b4791f" stroke-width="1.6"/>
+<path d="M530 1359 a7 7 0 0 1 7 -7 h264 a7 7 0 0 1 7 7 v33 h-278 z" fill="#fbf1e0" stroke="#b4791f" stroke-width="1.6"/>
+<text x="542.0" y="1370.0" class="cls-name" text-anchor="start">Session</text>
+<text x="542.0" y="1385.0" class="cls-col" text-anchor="start">colección: sessions</text>
+<rect x="734.4" y="1361" width="65.6" height="18" rx="9" fill="#b4791f"/>
+<text x="767.2" y="1374.0" class="cls-tag" text-anchor="middle">Sprint 3</text>
+<rect x="536" y="1395" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1405.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="536" y="1412" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1422.0" class="f-fk" text-anchor="start">user: ObjectId → User</text>
+<rect x="536" y="1429" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1439.0" class="f" text-anchor="start">tokenHash: String · único</text>
+<rect x="536" y="1446" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1456.0" class="f" text-anchor="start">platform: &#x27;web&#x27; | &#x27;android&#x27; | &#x27;ios&#x27;</text>
+<rect x="536" y="1463" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1473.0" class="f" text-anchor="start">expiresAt: Date</text>
+<rect x="536" y="1480" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1490.0" class="f" text-anchor="start">revokedAt?: Date</text>
+<rect x="536" y="1497" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1507.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="536" y="1514" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1524.0" class="f-idx" text-anchor="start">« índice TTL (expiresAt) »</text>
+<line x1="530" y1="1529" x2="808" y2="1529" stroke="#dcdad0"/>
+<rect x="536" y="1531" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="546.0" y="1541.0" class="f-op" text-anchor="start">cerrar sesión de verdad</text>
+</g>
+<g class="cls">
+<rect x="848" y="1352" width="410" height="235" rx="7" fill="#fff" stroke="#b4791f" stroke-width="1.6"/>
+<path d="M848 1359 a7 7 0 0 1 7 -7 h396 a7 7 0 0 1 7 7 v33 h-410 z" fill="#fbf1e0" stroke="#b4791f" stroke-width="1.6"/>
+<text x="860.0" y="1370.0" class="cls-name" text-anchor="start">Place</text>
+<text x="860.0" y="1385.0" class="cls-col" text-anchor="start">colección: places</text>
+<rect x="1184.4" y="1361" width="65.6" height="18" rx="9" fill="#b4791f"/>
+<text x="1217.2" y="1374.0" class="cls-tag" text-anchor="middle">Sprint 3</text>
+<rect x="854" y="1395" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1405.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="854" y="1412" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1422.0" class="f" text-anchor="start">name: String</text>
+<rect x="854" y="1429" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1439.0" class="f" text-anchor="start">kind: &#x27;cafe&#x27; | &#x27;terrace&#x27; | &#x27;park&#x27; | &#x27;library&#x27; | &#x27;other&#x27;</text>
+<rect x="854" y="1446" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1456.0" class="f" text-anchor="start">campus: String</text>
+<rect x="854" y="1463" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1473.0" class="f" text-anchor="start">address?: String</text>
+<rect x="854" y="1480" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1490.0" class="f" text-anchor="start">location: GeoJSON Point</text>
+<rect x="854" y="1497" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1507.0" class="f" text-anchor="start">active: Boolean</text>
+<rect x="854" y="1514" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1524.0" class="f" text-anchor="start">createdAt: Date</text>
+<rect x="854" y="1531" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1541.0" class="f" text-anchor="start">updatedAt: Date</text>
+<rect x="854" y="1548" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1558.0" class="f-idx" text-anchor="start">« índice 2dsphere (location) »</text>
+<line x1="848" y1="1563" x2="1258" y2="1563" stroke="#dcdad0"/>
+<rect x="854" y="1565" width="4" height="12" rx="2" fill="#b4791f"/>
+<text x="864.0" y="1575.0" class="f-op" text-anchor="start">ruleta: sitios cerca del campus</text>
+</g>
+<g class="cls">
+<rect x="530" y="1761" width="331" height="150" rx="7" fill="#fff" stroke="#9a3b27" stroke-width="1.6"/>
+<path d="M530 1768 a7 7 0 0 1 7 -7 h317 a7 7 0 0 1 7 7 v33 h-331 z" fill="#f8e9e5" stroke="#9a3b27" stroke-width="1.6"/>
+<text x="542.0" y="1779.0" class="cls-name" text-anchor="start">University</text>
+<text x="542.0" y="1794.0" class="cls-col" text-anchor="start">colección: universities</text>
+<rect x="756.4" y="1770" width="96.60000000000001" height="18" rx="9" fill="#9a3b27"/>
+<text x="804.7" y="1783.0" class="cls-tag" text-anchor="middle">Entrega final</text>
+<rect x="536" y="1804" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="546.0" y="1814.0" class="f-pk" text-anchor="start">_id: ObjectId</text>
+<rect x="536" y="1821" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="546.0" y="1831.0" class="f" text-anchor="start">name: String</text>
+<rect x="536" y="1838" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="546.0" y="1848.0" class="f" text-anchor="start">domains: [String]</text>
+<rect x="536" y="1855" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="546.0" y="1865.0" class="f" text-anchor="start">campuses: [String]</text>
+<rect x="536" y="1872" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="546.0" y="1882.0" class="f" text-anchor="start">active: Boolean</text>
+<line x1="530" y1="1887" x2="861" y2="1887" stroke="#dcdad0"/>
+<rect x="536" y="1889" width="4" height="12" rx="2" fill="#9a3b27"/>
+<text x="546.0" y="1899.0" class="f-op" text-anchor="start">OAuth: solo entran los dominios de la lista</text>
+</g></svg>
