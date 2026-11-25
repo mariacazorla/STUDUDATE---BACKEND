@@ -236,7 +236,7 @@ router.post('/:userId/restore', VerifyToken, RequireRole('admin'), ValidateId('u
  *     summary: Elimina un usuario para siempre (borrado físico, backoffice)
  *     description: >
  *       Solo se puede eliminar un usuario archivado (si no, 409). No se puede deshacer: se borran también
- *       sus votos de La Orla y sus Dates. Un admin no puede eliminarse a sí mismo (403).
+ *       sus votos de La Orla, sus Dates (con sus Planes y mensajes), sus bloqueos, sus partes y sus alertas. Un admin no puede eliminarse a sí mismo (403).
  *     parameters:
  *       - in: path
  *         name: userId

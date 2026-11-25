@@ -1,7 +1,11 @@
+import Block from '../models/Block';
 import DateModel from '../models/Date';
 import Grade from '../models/Grade';
+import Report from '../models/Report';
+import SafetyAlert from '../models/SafetyAlert';
 import User, { IUser, UserRole } from '../models/User';
 import type { UserListQuery } from '../middleware/Joi';
+import { deleteDateContents } from './DateService';
 import { escapeRegExp } from '../utils/escape-regexp';
 
 // Los datos del usuario con sesion, para GET /users/me. Nunca lleva la contraseña.
@@ -127,10 +131,23 @@ export const deleteUser = async (userId: string): Promise<DeleteUserResult> => {
         return 'not-archived';
     }
 
-    // Con el usuario se borran sus votos de La Orla (los que dio y los que recibio) y sus Dates: si no,
-    // quedarian datos que apuntan a un usuario que ya no existe
-    await Grade.deleteMany({ $or: [{ from: userId }, { to: userId }] });
-    await DateModel.deleteMany({ users: userId });
+    // Con el usuario se borra todo lo que apunta a el: si no, quedarian datos de un usuario que ya no existe.
+    // Primero sus Dates, y con cada Date su Plan y sus mensajes (antes los Planes se quedaban huerfanos)
+    const dates = await DateModel.find({ users: userId }).select('_id');
+    const dateIds = dates.map((date) => String(date._id));
+
+    await deleteDateContents(dateIds);
+    await DateModel.deleteMany({ _id: { $in: dateIds } });
+
+    // Despues sus votos de La Orla (los que dio y los que recibio), sus bloqueos (los que hizo y los que
+    // le hicieron), los partes que mando o que hablan de el, y sus alertas de ayuda
+    await Promise.all([
+        Grade.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
+        Block.deleteMany({ $or: [{ blocker: userId }, { blocked: userId }] }),
+        Report.deleteMany({ $or: [{ reporter: userId }, { reported: userId }] }),
+        SafetyAlert.deleteMany({ user: userId })
+    ]);
+
     await User.deleteOne({ _id: userId });
 
     return 'deleted';

@@ -1,5 +1,6 @@
 import DateModel, { DATE_DURATION_MS, DateStatus } from '../models/Date';
 import Grade from '../models/Grade';
+import Message from '../models/Message';
 import Plan from '../models/Plan';
 import User, { AuthUser } from '../models/User';
 import type { DateListQuery } from '../middleware/Joi';
@@ -102,14 +103,20 @@ export const extendDate = async (dateId: string, requester: AuthUser) => {
     return { date: await date.populate(POPULATE_USERS) };
 };
 
+// Funcion que borra lo que cuelga de unos Dates: su Plan y los mensajes de su chat. Un Plan o un
+// mensaje sin su Date no tiene sentido (el populate devolveria date: null y nadie sabria de quien es).
+// La usan deleteDate y, al eliminar un usuario para siempre, UserService.deleteUser
+export const deleteDateContents = async (dateIds: string[]) => {
+    await Promise.all([Plan.deleteMany({ date: { $in: dateIds } }), Message.deleteMany({ date: { $in: dateIds } })]);
+};
+
 // Funcion que elimina un Date (borrado fisico). Solo la usa el admin.
-// Si el Date tenia un Plan, tambien se elimina: un Plan sin su Date no tiene sentido (el populate
-// devolveria date: null y el backoffice no sabria de quien es)
+// Con el Date se eliminan su Plan y sus mensajes
 export const deleteDate = async (dateId: string) => {
     const date = await DateModel.findByIdAndDelete(dateId);
 
     if (date) {
-        await Plan.deleteOne({ date: date._id });
+        await deleteDateContents([String(date._id)]);
     }
 
     return date;
@@ -131,4 +138,4 @@ export const openDateIfMutual = async (from: string, to: string) => {
     return 'date' in result ? result.date : null;
 };
 
-export default { getDates, getDateById, createDate, updateStatus, extendDate, deleteDate, openDateIfMutual };
+export default { getDates, getDateById, createDate, updateStatus, extendDate, deleteDate, deleteDateContents, openDateIfMutual };
