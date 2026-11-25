@@ -1,9 +1,13 @@
 import mongoose from 'mongoose';
 import { config } from './config/config';
 import Logging from './library/Logging';
+import Block from './models/Block';
 import DateModel from './models/Date';
 import Grade from './models/Grade';
+import Message from './models/Message';
 import Plan from './models/Plan';
+import Report from './models/Report';
+import SafetyAlert from './models/SafetyAlert';
 import User from './models/User';
 import { gradesSeed, plansSeed, usersSeed } from './seed-data';
 import { openDateIfMutual } from './services/DateService';
@@ -11,7 +15,7 @@ import { openDateIfMutual } from './services/DateService';
 // Llena la base de datos con los datos de ejemplo de seed-data.ts.
 //
 //   npm run seed             inserta los datos solo si la base de datos está vacía
-//   npm run seed -- --reset  borra los usuarios, los votos, los Dates y los Planes y los vuelve a insertar
+//   npm run seed -- --reset  borra todas las colecciones de Studate y vuelve a insertar los datos de ejemplo
 //
 // Siempre trabaja sobre la base de datos del .env (MONGO_URL).
 
@@ -31,7 +35,23 @@ const seed = async () => {
         Logging.warning(
             `Borrados ${users.deletedCount} usuarios, ${grades.deletedCount} votos, ${dates.deletedCount} Dates y ${plans.deletedCount} Planes`
         );
+
+        // Lo que cuelga de los usuarios y de los Dates: mensajes, bloqueos, partes y alertas
+        const [messages, blocks, reports, alerts] = await Promise.all([
+            Message.deleteMany({}),
+            Block.deleteMany({}),
+            Report.deleteMany({}),
+            SafetyAlert.deleteMany({})
+        ]);
+        Logging.warning(
+            `Borrados ${messages.deletedCount} mensajes, ${blocks.deletedCount} bloqueos, ${reports.deletedCount} partes y ${alerts.deletedCount} alertas`
+        );
     }
+
+    // init() crea la coleccion de cada modelo y espera a que MongoDB termine de construir sus indices.
+    // Sin esto, una coleccion sin datos no existiria, y el script podria desconectarse antes de que el
+    // indice este hecho. Se hace siempre, tambien si la base de datos ya tenia datos
+    await Promise.all([Message.init(), Block.init(), Report.init(), SafetyAlert.init()]);
 
     const usersInDb = await User.countDocuments();
 

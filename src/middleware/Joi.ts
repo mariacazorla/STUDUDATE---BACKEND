@@ -4,7 +4,9 @@ import { NextFunction, Request, Response } from 'express';
 
 import { DATE_STATUSES, DateStatus } from '../models/Date';
 import { GRADE_VALUES, GradeValue, IGrade } from '../models/Grade';
+import { MESSAGE_MAX_LENGTH } from '../models/Message';
 import { ISpin, MAX_SPINS, PLAN_STATUSES, PlanStatus } from '../models/Plan';
+import { REPORT_REASONS, REPORT_SEVERITIES } from '../models/Report';
 import { IUser, PHOTO_MAX_LENGTH, USER_ROLES, UserRole } from '../models/User';
 
 export interface PaginationQuery {
@@ -332,6 +334,67 @@ export const Schemas = {
                 .example('confirmed'),
             spins
         }).custom(planRules)
+    },
+
+    // ---- Modelos del Sprint 2. Sus rutas llegan con cada funcionalidad; los esquemas ya estan aqui ----
+    // En ninguno se acepta quien hace la peticion (from, blocker, reporter, user): sale siempre del
+    // token (req.user), asi nadie puede escribir, bloquear o mandar un parte en nombre de otro
+
+    // Validaciones del chat
+    message: {
+        // Enviar un mensaje: solo el texto. El Date es la sala del chat
+        create: Joi.object({
+            // trim + min(1): un mensaje vacio ('' o '   ') no es valido
+            text: Joi.string().trim().min(1).max(MESSAGE_MAX_LENGTH).required().example('¿Quedamos en la cafetería de la EETAC?')
+        })
+    },
+
+    // Validaciones de los bloqueos
+    block: {
+        // Bloquear a alguien: el id del usuario al que se bloquea
+        create: Joi.object({
+            blocked: Joi.string().regex(OBJECT_ID).required().example('6ab3f2fe9c500204a7d5f8a4')
+        })
+    },
+
+    // Validaciones de los partes
+    report: {
+        // Mandar un parte: sobre quien, por que y, si se quiere, el Date donde paso y un comentario
+        create: Joi.object({
+            reported: Joi.string().regex(OBJECT_ID).required().example('6ab3f2fe9c500204a7d5f8a4'),
+            date: Joi.string().regex(OBJECT_ID).example('6ab3f2fe9c500204a7d5fa01'),
+            reason: Joi.string()
+                .valid(...REPORT_REASONS)
+                .required()
+                .example('harassment'),
+            text: Joi.string().trim().max(500).allow('').example('No para de escribirme aunque le he dicho que no.')
+        }),
+
+        // Revisar un parte (solo admin): se queda como revisado o descartado, con la gravedad y lo que se ha hecho.
+        // 'open' no se acepta: un parte revisado no vuelve a quedar abierto
+        review: Joi.object({
+            status: Joi.string().valid('reviewed', 'dismissed').required().example('reviewed'),
+            severity: Joi.string()
+                .valid(...REPORT_SEVERITIES)
+                .example('high'),
+            resolution: Joi.string().trim().max(500).allow('').example('Cuenta desactivada y aviso al usuario.')
+        })
+    },
+
+    // Validaciones de las alertas de seguridad (el boton de ayuda)
+    safetyAlert: {
+        // Pedir ayuda: todo es opcional, porque quien pide ayuda no esta para rellenar un formulario.
+        // Si se pide desde un chat, viaja el Date (o el Plan) para saber con quien esta
+        create: Joi.object({
+            date: Joi.string().regex(OBJECT_ID).example('6ab3f2fe9c500204a7d5fa01'),
+            plan: Joi.string().regex(OBJECT_ID).example('6ab3f2fe9c500204a7d5fb01'),
+            message: Joi.string().trim().max(300).allow('').example('Me siento incómoda, ¿podéis llamarme?')
+        }),
+
+        // Atender una alerta (solo admin): atendida o falsa alarma. 'open' no se acepta
+        attend: Joi.object({
+            status: Joi.string().valid('attended', 'false_alarm').required().example('attended')
+        })
     }
 };
 
