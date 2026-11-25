@@ -17,15 +17,28 @@ const required = (name: string) => {
 
 const MONGO_URL = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/studate';
 
-// Origen exacto del frontend. Como el refresh token va en una cookie, CORS tiene que aceptar
-// credenciales y con credenciales no se puede usar '*'.
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:4200';
+// Orígenes exactos desde los que un navegador puede llamar a la API, separados por comas en el .env.
+// Son varios porque hay más de un frontend: la web de Vite (5173), la app de Expo abierta en el navegador
+// (8081) y, en el servidor, la dirección pública. Como el refresh token va en una cookie, CORS tiene que
+// aceptar credenciales y con credenciales no se puede usar '*'.
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:8081')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
 
 const SERVER_PORT = process.env.SERVER_PORT ? Number(process.env.SERVER_PORT) : 1337;
 
-// En produccion la cookie del refresh token se marca como Secure (solo viaja por HTTPS).
-// En desarrollo no, porque el frontend va por http://localhost.
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// Ruta a la que el navegador envía la cookie del refresh token. En local la API cuelga de la raíz y es
+// /auth. En el servidor, nginx sirve la API detrás de /api, así que el navegador ve /api/auth: si la
+// cookie se quedara con /auth, no la enviaría nunca.
+const REFRESH_COOKIE_PATH = process.env.REFRESH_COOKIE_PATH || '/auth';
+
+// La cookie del refresh token se marca como Secure (solo viaja por HTTPS). Por defecto, en producción
+// sí y en desarrollo no, porque el frontend va por http://localhost. Se puede forzar con COOKIE_SECURE
+// (true o false), por ejemplo para probar el contenedor de producción por http antes de tener HTTPS.
+const COOKIE_SECURE = process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : IS_PRODUCTION;
 
 // Secretos con los que se firman los tokens. Son dos distintos para que un refresh token
 // no sirva como access token ni al revés.
@@ -46,7 +59,11 @@ export const config = {
         isProduction: IS_PRODUCTION
     },
     cors: {
-        origin: CORS_ORIGIN
+        origins: CORS_ORIGINS
+    },
+    cookie: {
+        refreshPath: REFRESH_COOKIE_PATH,
+        secure: COOKIE_SECURE
     },
     jwt: {
         secret: JWT_SECRET,

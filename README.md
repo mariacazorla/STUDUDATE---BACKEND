@@ -83,8 +83,10 @@ cp .env.example .env
 |---|---|---|
 | `MONGO_URL` | Dirección de tu MongoDB | `mongodb://127.0.0.1:27017/studate` |
 | `SERVER_PORT` | Puerto en el que escucha la API | `1337` |
-| `CORS_ORIGIN` | Origen exacto del frontend (con cookies no vale `*`) | `http://localhost:4200` |
+| `CORS_ORIGINS` | Orígenes exactos de los frontends, separados por comas (con cookies no vale `*`) | `http://localhost:5173,http://localhost:8081` |
 | `NODE_ENV` | Con `production`, la cookie del refresh token se marca `Secure` (solo HTTPS) | `development` |
+| `REFRESH_COOKIE_PATH` | Ruta de la cookie del refresh token. Detrás de nginx (`/api`) es `/api/auth` | `/auth` |
+| `COOKIE_SECURE` | Opcional: fuerza si la cookie es `Secure` (`true` o `false`) | lo que diga `NODE_ENV` |
 | `JWT_SECRET` | Secreto con el que se firma el access token. **Obligatoria** | valor de clase en `.env.example` |
 | `JWT_REFRESH_SECRET` | Secreto con el que se firma el refresh token; distinto del anterior. **Obligatoria** | valor de clase en `.env.example` |
 | `JWT_EXPIRES_IN` | Cuánto dura el access token | `15m` (15 minutos) |
@@ -149,7 +151,7 @@ src/
                      Aquí se amplía también el tipo Request de Express con req.user
     RequireRole.ts   Deja pasar solo a un rol concreto (403)
     Joi.ts           Guardas: validan el body (422), el id de la URL (400) y la paginación (400)
-    Cors.ts          Cabeceras de CORS, configuradas con CORS_ORIGIN
+    Cors.ts          Cabeceras de CORS, configuradas con CORS_ORIGINS
     Logger.ts        Escribe en consola cada petición y su código de respuesta
     ErrorHandler.ts  Convierte cualquier error en su código: 400, 401, 404, 409, 422 o 500
   controllers/     Leen la petición (req), llaman al service y eligen la respuesta (res)
@@ -189,6 +191,7 @@ El recorrido completo:
 2. `POST /auth/login` con `{ email, password }` responde `{ token, user }`, o 401 si el email o la
    contraseña no son correctos (el mismo mensaje en los dos casos, para no revelar qué emails están
    registrados). El refresh token no va en el JSON: se deja en una **cookie HttpOnly** (ver más abajo).
+   La app del móvil es la excepción: manda la cabecera `X-Client: movil` y lo recibe en el JSON.
 3. En cada petición a una ruta protegida, el cliente envía el token en la cabecera:
    `Authorization: Bearer <token>`.
 4. El middleware `VerifyToken` comprueba la firma y la caducidad, y que el usuario siga activo, y deja el
@@ -197,7 +200,8 @@ El recorrido completo:
 5. El middleware `RequireRole('admin')` comprueba el rol: si el usuario no es `admin`, responde 403.
 6. El access token dura poco (15 minutos). Cuando caduca, el cliente llama a `POST /auth/refresh`
    sin body: el navegador adjunta la cookie y la API responde `{ token }`, un access token nuevo, sin
-   volver a escribir la contraseña. El refresh token dura 7 días.
+   volver a escribir la contraseña. El refresh token dura 7 días. La app del móvil hace la misma
+   llamada con `{ refreshToken }` en el body.
 7. `POST /auth/logout` borra la cookie. A partir de ahí, `/auth/refresh` responde 401.
 
 ### Dónde va cada token
@@ -209,14 +213,27 @@ viaja en la cookie `refreshToken`, que pone el backend con `res.cookie` en el lo
 |---|---|
 | `HttpOnly` | JavaScript no puede leerla (`document.cookie` no la muestra). Un script inyectado por XSS no se la puede llevar |
 | `SameSite=Strict` | El navegador no la envía en peticiones que provoca otra web (CSRF) |
-| `Path=/auth` | Solo se envía a `/auth/refresh` y `/auth/logout`, que son las únicas rutas que la necesitan |
+| `Path=/auth` | Solo se envía a `/auth/refresh` y `/auth/logout`, que son las únicas rutas que la necesitan. Se cambia con `REFRESH_COOKIE_PATH` (detrás de nginx, `/api/auth`) |
 | `Max-Age` | Dura lo mismo que el refresh token (`JWT_REFRESH_EXPIRES_IN`) |
-| `Secure` | Solo por HTTPS. Se activa con `NODE_ENV=production`; en clase va por `http://localhost` |
+| `Secure` | Solo por HTTPS. Se activa con `NODE_ENV=production` (o con `COOKIE_SECURE`); en clase va por `http://localhost` |
 
-Para que el navegador envíe y acepte la cookie entre `localhost:4200` y `localhost:1337`, el frontend
-llama a `/auth/*` con `withCredentials: true` y CORS responde con `credentials: true` y el origen
-exacto de `CORS_ORIGIN` (con credenciales, `*` no está permitido). La cookie la lee `cookie-parser`,
-que la deja en `req.cookies`.
+Para que el navegador envíe y acepte la cookie entre `localhost:5173` y `localhost:1337`, el frontend
+llama a la API con `credentials: 'include'` y CORS responde con `credentials: true` y el origen de la
+petición, si está en la lista de `CORS_ORIGINS` (con credenciales, `*` no está permitido). La cookie la
+lee `cookie-parser`, que la deja en `req.cookies`.
+
+La app del móvil no es un navegador: no tiene cookies HttpOnly ni pasa por CORS. Por eso tiene su
+propio modo, que no cambia nada de lo anterior:
+
+| | Web | App del móvil |
+|---|---|---|
+| Login | Sin cabeceras especiales | Cabecera `X-Client: movil` |
+| Dónde llega el refresh token | Cookie HttpOnly; no aparece en el JSON | En el JSON (`refreshToken`); no se pone cookie |
+| Dónde se guarda | Lo guarda el navegador; JavaScript no lo ve | En el almacén cifrado del teléfono (`expo-secure-store`) |
+| `POST /auth/refresh` | Sin body: viaja la cookie | Body `{ refreshToken }` |
+
+Si a `/auth/refresh` le llegan la cookie y el body, se usa el del body: es el que el cliente ha
+enviado a propósito.
 
 401 y 403 no son lo mismo: 401 es "no sé quién eres" (no hay sesión válida) y 403 es "sé quién eres,
 pero no tienes permiso".
@@ -234,7 +251,7 @@ si su petición estaba bien formada.
 
 | Rutas | Quién puede |
 |---|---|
-| `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` | Cualquiera (refresh necesita la cookie con un refresh token válido) |
+| `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` | Cualquiera (refresh necesita un refresh token válido, en la cookie o en el body) |
 | `/ping`, `/api-docs` | Cualquiera |
 | `/users/me`, `/users/directory` | Cualquier usuario con sesión |
 | `/users`, `/users/:userId`, `/users/:userId/archive`, `/users/:userId/restore` (gestión de usuarios) | Solo `admin` |

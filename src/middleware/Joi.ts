@@ -230,9 +230,15 @@ export const Schemas = {
         login: Joi.object<IUser>({
             email: Joi.string().email().required().example('admin@example.com'),
             password: Joi.string().required().example('studate26')
+        }),
+
+        // Refresh: la web no manda body (el refresh token va en la cookie), y por eso el campo es opcional.
+        // La app del movil no tiene cookie y lo manda aqui
+        refresh: Joi.object({
+            refreshToken: Joi.string().example('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...')
         })
 
-        // Refresh y logout no tienen esquema: no llevan body, el refresh token va en una cookie
+        // Logout no tiene esquema: no lleva body
     },
 
     // Validaciones de la gestion de usuarios del backoffice

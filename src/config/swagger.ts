@@ -12,6 +12,7 @@ import { config } from './config';
 // peticiones, así que no se pueden quedar desfasados.
 const { swagger: registerInput } = j2s(Schemas.auth.register);
 const { swagger: loginInput } = j2s(Schemas.auth.login);
+const { swagger: refreshInput } = j2s(Schemas.auth.refresh);
 const { swagger: userInput } = j2s(Schemas.user.create);
 const { swagger: userUpdateInput } = j2s(Schemas.user.update);
 const { swagger: gradeInput } = j2s(Schemas.grade.create);
@@ -215,11 +216,13 @@ const swaggerDocument = swaggerJsdoc({
                 bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
                 // El refresh token va en una cookie HttpOnly que deja el login; la usan /auth/refresh y /auth/logout.
                 // Desde la propia página de Swagger funciona sola, porque el navegador la envía.
+                // La app del móvil no usa la cookie: manda el refresh token en el body de /auth/refresh.
                 refreshCookie: { type: 'apiKey', in: 'cookie', name: 'refreshToken' }
             },
             schemas: {
                 RegisterInput: registerInput,
                 LoginInput: loginInput,
+                RefreshInput: refreshInput,
                 UserInput: userInput,
                 UserUpdateInput: userUpdateInput,
                 User: userSchema,
@@ -235,11 +238,12 @@ const swaggerDocument = swaggerJsdoc({
             },
             responses: {
                 LoginOk: okResponse(
-                    'Sesión iniciada: el access token y el usuario (el refresh token va en la cookie)',
+                    'Sesión iniciada: el access token y el usuario. El refresh token va en la cookie; solo con X-Client: movil va en el JSON',
                     {
                         type: 'object',
                         properties: {
                             token: { type: 'string' },
+                            refreshToken: { type: 'string', description: 'Solo si la petición lleva X-Client: movil' },
                             user: userSchema
                         }
                     },
