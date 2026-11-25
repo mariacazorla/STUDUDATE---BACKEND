@@ -298,6 +298,18 @@ export const Schemas = {
         })
     },
 
+    // Validaciones de La Orla (el flujo del estudiante: aqui "from" sale siempre del token)
+    orla: {
+        // Votar un Expediente: a quien (to) y que nota (A+ o F)
+        vote: Joi.object({
+            to: Joi.string().regex(OBJECT_ID).required().example('6ab3f2fe9c500204a7d5f8a4'),
+            value: Joi.string()
+                .valid(...GRADE_VALUES)
+                .required()
+                .example('A+')
+        })
+    },
+
     // Validaciones de los Dates
     date: {
         // Abrir un Date: los ids de los dos usuarios, distintos entre si

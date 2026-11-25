@@ -84,6 +84,14 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
     `'fake_profile'`, `'inappropriate'` u `'other'`; `status`, `'open'`, `'reviewed'` o `'dismissed'`; `severity` (`'low'`, `'medium'` o `'high'`) y `resolution` las pone el admin.
   - **SafetyAlert**: `{ _id, user, date?, plan?, type, message?, status, attendedBy?, attendedAt?, createdAt, updatedAt }`. `type` es `'sos'`; `status`, `'open'`, `'attended'` o
     `'false_alarm'`.
+- **La Orla del estudiante** (`/orla`, solo rol `user`; el `from` sale siempre del token):
+  - `GET /orla/next` responde `{ user, remaining }`: el siguiente Expediente (un estudiante activo, que no soy yo, al que no he votado y sin bloqueo entre
+    los dos) con `{ _id, name, degree?, lookingFor?, bio?, photo?, birthDate? }`, y cuántos A+ me quedan hoy. Si no queda nadie, `user` es `null`.
+  - `POST /orla/votes` con `{ to, value }` responde 201 `{ grade, date, remaining }`. `date` solo viene (si no, `null`) cuando el A+ forma un A+ mutuo y
+    abre el Date. 422 si me voto a mí mismo, 403 si hay un bloqueo, 409 si ya había votado ese perfil, y 409 `Has llegado a los 30 A+ de hoy. Vuelve mañana.`
+    al pasar del cupo (30 A+ por día natural; las F no cuentan). 404 si el votado no existe o no es estudiante.
+  - `DELETE /orla/votes/:gradeId` deshace un voto propio con menos de 10 s y responde 200 `{ dateRemoved, remaining }`; si ese A+ había abierto un Date,
+    `dateRemoved` es `true` y el Date se borra. 409 pasados los 10 s; 404 si el voto no es mío o no existe.
 
 ## Tareas
 
@@ -133,6 +141,12 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 #### Primer despliegue en Docker (`feat/docker`)
 
 - [x] Dockerfile de la API en dos etapas, sin dependencias de desarrollo y con el seed compilado · Diego
+
+#### La Orla (`feat/orla`)
+
+- [x] Siguiente Expediente: usuario activo, que no soy yo, que no he votado y sin bloqueos entre los dos · María
+- [x] Votar como estudiante; el A+ mutuo abre el Date con el sorteo del turno · María
+- [x] Cupo de 30 A+ al día (con su índice) y deshacer en 10 s · María
 
 ## Bitácora
 
@@ -444,3 +458,21 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   `Path=/api/auth` y sin `Secure` (`REFRESH_COOKIE_PATH=/api/auth`, `COOKIE_SECURE=false`). El workflow no se ha podido ejecutar todavía:
   lo hará el primer push.
 - Prompt de IA usado: el del bloque "Primer despliegue en Docker" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).
+
+### 2026-11-25 · Sprint 2: La Orla del estudiante (`feat/orla`)
+
+- La Orla es la pantalla del estudiante (como un Tinder, pero de estudiantes): te sale el Expediente de alguien y le pones A+ o F; dos A+ cruzados abren
+  un Date. Va en un router nuevo `/orla`, separado del `/grades` de admin, y todas sus rutas piden rol `user`. El que vota sale siempre del token.
+- **Siguiente Expediente** (`GET /orla/next`): un estudiante activo (el prehook ya quita inactivos y archivados), que no soy yo, al que no he votado y
+  sin bloqueo (modelo Block) en ninguno de los dos sentidos. Devuelve solo datos públicos del Expediente y, en la misma respuesta, cuántos A+ me quedan hoy.
+- **Votar** (`POST /orla/votes`): no se puede votar a uno mismo (422), a un bloqueado (403) ni dos veces (409). Si es A+ y la otra persona ya me había
+  dado A+, se reutiliza `openDateIfMutual` (que sortea el turno y escribe el primer evento del history) y el Date va en la respuesta.
+- **Cupo y deshacer**: 30 A+ por día natural (los de hoy se cuentan con el índice nuevo `(from, value, createdAt)`); el 31.º da 409, la F no cuenta.
+  `DELETE /orla/votes/:gradeId` deshace un voto propio con menos de 10 s; si ese A+ había abierto un Date, se borra también (con la cascada de
+  `deleteDate`). Pasados los 10 s, 409; el voto de otro, 404.
+- Validación ejecutada: `npm run build` y `npm run lint` sin errores. Con la API y el seed recién hecho, 23 comprobaciones con `fetch` (equivalente a curl),
+  todas correctas: el siguiente perfil no incluye al votado ni a uno mismo ni a un bloqueado y trae `remaining`; un A+ a quien ya me había dado A+ abre el
+  Date con `history [pending]`; votar dos veces da 409 y votarse a uno mismo 422; votar a un bloqueado da 403 y el bloqueado no sale en La Orla; deshacer
+  dentro de 10 s da 200 y borra el Date del A+ mutuo; deshacer el voto de otro da 404; el admin recibe 403; el A+ número 31 da 409 y la F sí se permite;
+  deshacer a los 11 s da 409. El índice `(from, value, createdAt)` aparece en MongoDB.
+- Prompt de IA usado: el del bloque "3 · La Orla" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).

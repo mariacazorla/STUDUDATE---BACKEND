@@ -21,6 +21,7 @@ const { swagger: userInput } = j2s(Schemas.user.create);
 const { swagger: userUpdateInput } = j2s(Schemas.user.update);
 const { swagger: gradeInput } = j2s(Schemas.grade.create);
 const { swagger: gradeUpdateInput } = j2s(Schemas.grade.update);
+const { swagger: orlaVoteInput } = j2s(Schemas.orla.vote);
 const { swagger: dateInput } = j2s(Schemas.date.create);
 const { swagger: dateUpdateInput } = j2s(Schemas.date.update);
 const { swagger: planInput } = j2s(Schemas.plan.create);
@@ -302,6 +303,7 @@ const swaggerDocument = swaggerJsdoc({
             { name: 'Auth', description: 'Registro, login, renovación del token y logout' },
             { name: 'Users', description: 'Usuarios: el de la sesión, con quién abrir un Date y la gestión de usuarios del backoffice (solo admin)' },
             { name: 'Grades', description: 'Votos de La Orla: A+ o F de un usuario a otro (solo admin)' },
+            { name: 'Orla', description: 'La Orla del estudiante: siguiente Expediente, votar, cupo del día y deshacer' },
             { name: 'Dates', description: 'Citas entre dos usuarios que se han dado A+ (el admin ve todas; un usuario, las suyas)' },
             { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' }
         ],
@@ -327,6 +329,7 @@ const swaggerDocument = swaggerJsdoc({
                 User: userSchema,
                 GradeInput: gradeInput,
                 GradeUpdateInput: gradeUpdateInput,
+                OrlaVoteInput: orlaVoteInput,
                 Grade: gradeSchema,
                 DateInput: dateInput,
                 DateUpdateInput: dateUpdateInput,
