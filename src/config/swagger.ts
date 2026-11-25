@@ -252,15 +252,22 @@ const messageExample = {
     createdAt: '2026-11-03T12:00:00.000Z'
 };
 
-// Un bloqueo: quién bloquea y a quién
+// Un bloqueo: quién bloquea y a quién. En GET /blocks, blocked llega con los datos de la persona
 const blockSchema = {
     type: 'object',
     properties: {
         _id: storedFields._id,
         blocker: { type: 'string', description: 'Id de quien bloquea' },
-        blocked: { type: 'string', description: 'Id del usuario bloqueado' },
+        blocked: { type: 'string', description: 'Id del usuario bloqueado (en GET /blocks, { _id, name, degree?, photo? })' },
         createdAt: storedFields.createdAt
     }
+};
+
+const blockExample = {
+    _id: '6ab3f2fe9c500204a7d5fe01',
+    blocker: gradeExample.from._id,
+    blocked: gradeExample.to._id,
+    createdAt: '2026-11-03T12:30:00.000Z'
 };
 
 // Un parte sobre un usuario. Solo lo ve el admin, que le pone la gravedad y anota lo que ha hecho
@@ -319,7 +326,8 @@ const swaggerDocument = swaggerJsdoc({
                 description:
                     'Citas entre dos usuarios que se han dado A+ (el admin ve todas; un usuario, las suyas) y el historial de su chat. Los mensajes en tiempo real van por socket.io (eventos date:join, date:message, date:read, date:updated), con el mismo token en el handshake'
             },
-            { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' }
+            { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' },
+            { name: 'Blocks', description: 'Bloqueos del estudiante: a quién no quiere volver a ver (ni en La Orla ni en los chats)' }
         ],
         // Por defecto todas las rutas piden el token (el candado de Swagger).
         // Las rutas públicas lo quitan con security: [] en su comentario @openapi.
@@ -445,6 +453,17 @@ const swaggerDocument = swaggerJsdoc({
                     },
                     { messages: [messageExample], total: 4, page: 1, pages: 1 }
                 ),
+                BlockOne: okResponse(
+                    'El bloqueo creado y el Date que se ha cerrado con él (null si no había)',
+                    { type: 'object', properties: { block: blockSchema, date: { ...dateSchema, nullable: true } } },
+                    { block: blockExample, date: null }
+                ),
+                BlockList: okResponse(
+                    'Mis bloqueos, con los datos de cada persona bloqueada',
+                    { type: 'object', properties: { blocks: { type: 'array', items: blockSchema } } },
+                    { blocks: [blockExample] }
+                ),
+                AlreadyBlocked: errorResponse('Ya había un bloqueo a esa persona', 'Ya tienes bloqueada a esta persona'),
                 NotArchived: errorResponse('Solo se puede eliminar para siempre un usuario archivado', 'Archiva el usuario antes de eliminarlo'),
                 OwnUser: errorResponse('Un admin no puede hacer esto con su propio usuario', 'No puedes hacer esto con tu propio usuario'),
                 UserOne: okResponse('Un usuario', { type: 'object', properties: { user: userSchema } }, { user: userExample }),

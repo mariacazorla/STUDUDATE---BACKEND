@@ -9,6 +9,7 @@ import Logging from './library/Logging';
 import Logger from './middleware/Logger';
 import ErrorHandler from './middleware/ErrorHandler';
 import authRoutes from './routes/Auth';
+import blockRoutes from './routes/Block';
 import dateRoutes from './routes/Date';
 import gradeRoutes from './routes/Grade';
 import orlaRoutes from './routes/Orla';
@@ -51,6 +52,7 @@ const StartServer = () => {
     router.use('/orla', orlaRoutes);
     router.use('/dates', dateRoutes);
     router.use('/plans', planRoutes);
+    router.use('/blocks', blockRoutes);
 
     // La documentacion y el healthcheck son publicos
     router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
