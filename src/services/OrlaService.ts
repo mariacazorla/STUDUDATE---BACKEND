@@ -1,6 +1,7 @@
 import Block from '../models/Block';
-import Grade from '../models/Grade';
+import Grade, { GradeValue } from '../models/Grade';
 import User from '../models/User';
+import { openDateIfMutual } from './DateService';
 
 // La Orla es la pantalla del estudiante: va viendo Expedientes y les pone A+ o F. Este service tiene lo
 // que no hace el admin: el siguiente perfil, votar como estudiante, el cupo del dia y deshacer.
@@ -54,4 +55,44 @@ export const getNext = async (userId: string) => {
     return { user, remaining };
 };
 
-export default { getNext, remainingAPlus, DAILY_A_PLUS_CAP };
+// Lo que puede salir mal al votar. El controlador lo traduce a un codigo HTTP
+export type VoteError = 'same-user' | 'not-found' | 'blocked' | 'already-voted';
+
+// Votar un Expediente como estudiante. "from" es quien vota (sale del token), "to" a quien.
+// Comprueba, por orden: que no me voto a mi mismo, que el otro existe y es estudiante, que no hay
+// bloqueo entre los dos y que no lo habia votado ya. Si es A+ y el otro ya me habia dado A+, se abre
+// el Date con el sorteo del turno (openDateIfMutual).
+export const vote = async (from: string, to: string, value: GradeValue) => {
+    if (from === to) {
+        return { error: 'same-user' as const };
+    }
+
+    // findById pasa por el prehook: un usuario inactivo o archivado no se encuentra (no se puede votar)
+    const target = await User.findById(to);
+
+    if (!target || target.role !== 'user') {
+        return { error: 'not-found' as const };
+    }
+
+    const block = await Block.findOne({ $or: [{ blocker: from, blocked: to }, { blocker: to, blocked: from }] });
+
+    if (block) {
+        return { error: 'blocked' as const };
+    }
+
+    const existing = await Grade.findOne({ from, to });
+
+    if (existing) {
+        return { error: 'already-voted' as const };
+    }
+
+    const grade = await Grade.create({ from, to, value });
+
+    // El "match": si es A+ y el otro ya me habia dado A+, se abre el Date (openDateIfMutual sortea el
+    // turno y escribe el primer evento del history). Devuelve el Date o null
+    const date = value === 'A+' ? await openDateIfMutual(from, to) : null;
+
+    return { grade, date, remaining: await remainingAPlus(from) };
+};
+
+export default { getNext, vote, remainingAPlus, DAILY_A_PLUS_CAP };

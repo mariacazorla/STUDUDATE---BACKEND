@@ -21,6 +21,7 @@ const { swagger: userInput } = j2s(Schemas.user.create);
 const { swagger: userUpdateInput } = j2s(Schemas.user.update);
 const { swagger: gradeInput } = j2s(Schemas.grade.create);
 const { swagger: gradeUpdateInput } = j2s(Schemas.grade.update);
+const { swagger: orlaVoteInput } = j2s(Schemas.orla.vote);
 const { swagger: dateInput } = j2s(Schemas.date.create);
 const { swagger: dateUpdateInput } = j2s(Schemas.date.update);
 const { swagger: planInput } = j2s(Schemas.plan.create);
@@ -328,6 +329,7 @@ const swaggerDocument = swaggerJsdoc({
                 User: userSchema,
                 GradeInput: gradeInput,
                 GradeUpdateInput: gradeUpdateInput,
+                OrlaVoteInput: orlaVoteInput,
                 Grade: gradeSchema,
                 DateInput: dateInput,
                 DateUpdateInput: dateUpdateInput,

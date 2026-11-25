@@ -2,6 +2,7 @@ import express from 'express';
 
 import controller from '../controllers/Orla';
 
+import { Schemas, ValidateJoi } from '../middleware/Joi';
 import { RequireRole } from '../middleware/RequireRole';
 import { VerifyToken } from '../middleware/VerifyToken';
 
@@ -34,5 +35,39 @@ const router = express.Router();
 
 // El siguiente Expediente y el cupo del dia
 router.get('/next', VerifyToken, RequireRole('user'), controller.next);
+
+/**
+ * @openapi
+ * /orla/votes:
+ *   post:
+ *     tags: [Orla]
+ *     summary: Votar un Expediente (A+ o F)
+ *     description: >
+ *       El `from` sale del token. No se puede votar a uno mismo (422), a alguien con quien hay un bloqueo
+ *       (403), ni dos veces al mismo perfil (409). Si es A+ y el otro ya me había dado A+, se abre el Date
+ *       y la respuesta lo incluye en `date`.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/OrlaVoteInput' }
+ *     responses:
+ *       201:
+ *         description: Voto creado (con el Date si se ha formado un A+ mutuo)
+ *         content:
+ *           application/json:
+ *             example:
+ *               grade: { _id: 6ab3f2fe9c500204a7d5f901, from: { _id: 6ab3f2fe9c500204a7d5f8a3, name: Laia Puig }, to: { _id: 6ab3f2fe9c500204a7d5f8a4, name: Pau Ferrer }, value: 'A+' }
+ *               date: null
+ *               remaining: 26
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       409: { $ref: '#/components/responses/Conflict' }
+ *       422: { $ref: '#/components/responses/Unprocessable' }
+ */
+
+// Votar un Expediente
+router.post('/votes', VerifyToken, RequireRole('user'), ValidateJoi(Schemas.orla.vote), controller.vote);
 
 export = router;
