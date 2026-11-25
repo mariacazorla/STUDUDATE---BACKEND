@@ -4,6 +4,7 @@ import http from 'http';
 import mongoose from 'mongoose';
 import { config } from './config/config';
 import { Cors } from './middleware/Cors';
+import { StartExpireDates } from './jobs/ExpireDates';
 import Logging from './library/Logging';
 import Logger from './middleware/Logger';
 import ErrorHandler from './middleware/ErrorHandler';
@@ -84,6 +85,9 @@ const StartServer = () => {
 
     /** Chat (socket.io) */
     StartChat(server);
+
+    /** Cierre de los Dates caducados, cada minuto */
+    StartExpireDates();
 
     server.listen(config.server.port, () => Logging.info(`Server is running on port ${config.server.port}`));
 };

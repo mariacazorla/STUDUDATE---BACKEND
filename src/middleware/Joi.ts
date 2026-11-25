@@ -342,12 +342,13 @@ export const Schemas = {
                 .example(['6ab3f2fe9c500204a7d5f8a3', '6ab3f2fe9c500204a7d5f8a4'])
         }),
 
-        // Cambiar de bandeja: solo el estado
+        // Cambiar de bandeja (solo admin): el estado y, si se quiere, el motivo, que queda en el historial
         update: Joi.object({
             status: Joi.string()
                 .valid(...DATE_STATUSES)
                 .required()
-                .example('ongoing')
+                .example('closed'),
+            reason: Joi.string().trim().max(200).allow('').example('Cerrado tras revisar un parte')
         })
     },
 

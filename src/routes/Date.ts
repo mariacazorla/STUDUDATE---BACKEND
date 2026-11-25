@@ -2,12 +2,13 @@ import express from 'express';
 
 import controller from '../controllers/Date';
 
-import { Schemas, ValidateDateList, ValidateId, ValidateJoi } from '../middleware/Joi';
+import { Schemas, ValidateDateList, ValidateId, ValidateJoi, ValidatePagination } from '../middleware/Joi';
 import { RequireRole } from '../middleware/RequireRole';
 import { VerifyToken } from '../middleware/VerifyToken';
 
-// Rutas de los Dates. A diferencia del backoffice, no son solo para admin: cualquier usuario con sesion
-// ve y gestiona sus propios Dates (el service filtra por req.user). Eliminar si es solo del admin.
+// Rutas de los Dates. Cualquier usuario con sesion ve sus propios Dates, lee su chat y pide la prorroga
+// (el service filtra por req.user). Abrir un Date a mano, cambiarlo de estado y eliminarlo es solo del
+// admin: para los estudiantes, los Dates se abren con el A+ mutuo de La Orla y cambian de estado solos.
 const router = express.Router();
 
 /**
@@ -69,11 +70,11 @@ router.get('/:dateId', VerifyToken, ValidateId('dateId'), controller.readDate);
  * /dates:
  *   post:
  *     tags: [Dates]
- *     summary: Abre un Date entre dos usuarios
+ *     summary: Abre un Date entre dos usuarios a mano (solo admin)
  *     description: >
- *       Se sortea quién escribe primero y caduca en 24 horas. Un usuario normal solo puede abrir Dates en los
- *       que está él (403). Solo puede haber un Date entre cada pareja (409). Los Dates también se abren solos
- *       cuando dos usuarios se dan A+ en La Orla.
+ *       Se sortea quién escribe primero y caduca en 24 horas. Solo puede haber un Date entre cada pareja (409).
+ *       Un estudiante no abre Dates a mano (403): los suyos se abren solos cuando dos usuarios se dan A+ en La Orla.
+ *       En el historial queda qué admin lo abrió.
  *     requestBody:
  *       required: true
  *       content:
@@ -82,21 +83,25 @@ router.get('/:dateId', VerifyToken, ValidateId('dateId'), controller.readDate);
  *     responses:
  *       201: { $ref: '#/components/responses/DateOne' }
  *       401: { $ref: '#/components/responses/Unauthorized' }
- *       403: { $ref: '#/components/responses/NotYourDate' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
  *       404: { $ref: '#/components/responses/NotFound' }
  *       409: { $ref: '#/components/responses/DateConflict' }
  *       422: { $ref: '#/components/responses/Unprocessable' }
  */
 
-// Ruta para abrir un Date
-router.post('/', VerifyToken, ValidateJoi(Schemas.date.create), controller.createDate);
+// Ruta para abrir un Date a mano: solo el admin
+router.post('/', VerifyToken, RequireRole('admin'), ValidateJoi(Schemas.date.create), controller.createDate);
 
 /**
  * @openapi
  * /dates/{dateId}:
  *   put:
  *     tags: [Dates]
- *     summary: Cambia un Date de bandeja
+ *     summary: Cambia un Date de bandeja a mano (solo admin)
+ *     description: >
+ *       El cambio queda en el historial con el admin, la hora y el motivo (si lo escribe). Al cerrar, closedReason
+ *       es `admin`. Los estudiantes no cambian los Dates de estado: pasan a En curso con el primer mensaje del chat
+ *       y se cierran solos al caducar.
  *     parameters:
  *       - in: path
  *         name: dateId
@@ -111,12 +116,13 @@ router.post('/', VerifyToken, ValidateJoi(Schemas.date.create), controller.creat
  *       200: { $ref: '#/components/responses/DateOne' }
  *       400: { $ref: '#/components/responses/BadRequest' }
  *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
  *       404: { $ref: '#/components/responses/NotFound' }
  *       422: { $ref: '#/components/responses/Unprocessable' }
  */
 
-// Ruta para cambiar el estado
-router.put('/:dateId', VerifyToken, ValidateId('dateId'), ValidateJoi(Schemas.date.update), controller.updateDate);
+// Ruta para cambiar el estado a mano: solo el admin
+router.put('/:dateId', VerifyToken, RequireRole('admin'), ValidateId('dateId'), ValidateJoi(Schemas.date.update), controller.updateDate);
 
 /**
  * @openapi
@@ -124,7 +130,9 @@ router.put('/:dateId', VerifyToken, ValidateId('dateId'), ValidateJoi(Schemas.da
  *   post:
  *     tags: [Dates]
  *     summary: Usa la prórroga de un Date (24 horas más)
- *     description: Solo hay una prórroga por Date (409 si ya se ha usado).
+ *     description: >
+ *       Solo hay una prórroga por Date (409 si ya se ha usado) y no se puede prorrogar un Date cerrado (409).
+ *       Queda en el historial quién la pidió, y la sala del chat recibe el Date actualizado (`date:updated`).
  *     parameters:
  *       - in: path
  *         name: dateId
@@ -140,6 +148,37 @@ router.put('/:dateId', VerifyToken, ValidateId('dateId'), ValidateJoi(Schemas.da
 
 // Ruta para usar la prorroga
 router.post('/:dateId/extend', VerifyToken, ValidateId('dateId'), controller.extendDate);
+
+/**
+ * @openapi
+ * /dates/{dateId}/messages:
+ *   get:
+ *     tags: [Dates]
+ *     summary: El historial del chat de un Date, paginado
+ *     description: >
+ *       La página 1 son los mensajes más nuevos; dentro de cada página van en orden cronológico. Lo pueden pedir
+ *       los dos usuarios del Date y el admin (404 si el Date es de otros). Los mensajes nuevos llegan por
+ *       socket.io (evento `date:message`), no por aquí.
+ *     parameters:
+ *       - in: path
+ *         name: dateId
+ *         required: true
+ *         schema: { type: string, pattern: '^[0-9a-fA-F]{24}$' }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+ *     responses:
+ *       200: { $ref: '#/components/responses/MessageList' }
+ *       400: { $ref: '#/components/responses/InvalidPagination' }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ */
+
+// Ruta para leer el historial del chat
+router.get('/:dateId/messages', VerifyToken, ValidateId('dateId'), ValidatePagination, controller.readMessages);
 
 /**
  * @openapi

@@ -228,9 +228,10 @@ const planExample = {
     updatedAt: '2026-11-05T10:00:00.000Z'
 };
 
-// ---- Modelos del Sprint 2. Todavía no tienen rutas: aquí queda documentado qué forma tienen ----
+// ---- Modelos del Sprint 2 ----
 
-// Un mensaje del chat de un Date
+// Un mensaje del chat de un Date. Los nuevos viajan por socket.io (evento date:message); el historial se
+// lee con GET /dates/{dateId}/messages
 const messageSchema = {
     type: 'object',
     properties: {
@@ -241,6 +242,14 @@ const messageSchema = {
         readAt: { type: 'string', format: 'date-time', description: 'Cuándo lo leyó la otra persona' },
         createdAt: storedFields.createdAt
     }
+};
+
+const messageExample = {
+    _id: '6ab3f2fe9c500204a7d5fd01',
+    date: dateExample._id,
+    from: gradeExample.to._id,
+    text: '¡Hola! Me ha tocado empezar a mí. ¿Qué tal los parciales?',
+    createdAt: '2026-11-03T12:00:00.000Z'
 };
 
 // Un bloqueo: quién bloquea y a quién
@@ -305,7 +314,11 @@ const swaggerDocument = swaggerJsdoc({
             { name: 'Users', description: 'Usuarios: el de la sesión, con quién abrir un Date y la gestión de usuarios del backoffice (solo admin)' },
             { name: 'Grades', description: 'Votos de La Orla: A+ o F de un usuario a otro (solo admin)' },
             { name: 'Orla', description: 'La Orla del estudiante: siguiente Expediente, votar, cupo del día y deshacer' },
-            { name: 'Dates', description: 'Citas entre dos usuarios que se han dado A+ (el admin ve todas; un usuario, las suyas)' },
+            {
+                name: 'Dates',
+                description:
+                    'Citas entre dos usuarios que se han dado A+ (el admin ve todas; un usuario, las suyas) y el historial de su chat. Los mensajes en tiempo real van por socket.io (eventos date:join, date:message, date:read, date:updated), con el mismo token en el handshake'
+            },
             { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' }
         ],
         // Por defecto todas las rutas piden el token (el candado de Swagger).
@@ -416,10 +429,22 @@ const swaggerDocument = swaggerJsdoc({
                 PlanConflict: errorResponse('El Date está cerrado o ya tiene un Plan (también si está archivado)', 'Este Date ya tiene un Plan'),
                 PlanArchived: errorResponse('El Plan está archivado: hay que restaurarlo antes', 'El Plan está archivado: restáuralo antes de editarlo'),
                 PlanNotArchived: errorResponse('El Plan no está archivado (para eliminarlo, primero se archiva)', 'Archiva el Plan antes de eliminarlo'),
-                AlreadyExtended: errorResponse('La prórroga solo se puede usar una vez', 'La prórroga de este Date ya se ha usado'),
+                AlreadyExtended: errorResponse('La prórroga solo se puede usar una vez, y no en un Date cerrado ("Este Date está cerrado")', 'La prórroga de este Date ya se ha usado'),
                 GradeConflict: errorResponse('Ese usuario ya ha votado ese perfil (para cambiar la nota, PUT)', 'Este usuario ya ha votado ese perfil'),
                 DateConflict: errorResponse('Ya hay un Date entre esos dos usuarios', 'Ya hay un Date entre estos dos usuarios'),
-                NotYourDate: errorResponse('Un usuario normal solo puede abrir Dates en los que está él', 'Solo puedes abrir Dates en los que estés tú'),
+                MessageList: okResponse(
+                    'Una página del chat de un Date (la página 1, los más nuevos) y los datos de paginación',
+                    {
+                        type: 'object',
+                        properties: {
+                            messages: { type: 'array', items: messageSchema },
+                            total: { type: 'integer', example: 4 },
+                            page: { type: 'integer', example: 1 },
+                            pages: { type: 'integer', example: 1 }
+                        }
+                    },
+                    { messages: [messageExample], total: 4, page: 1, pages: 1 }
+                ),
                 NotArchived: errorResponse('Solo se puede eliminar para siempre un usuario archivado', 'Archiva el usuario antes de eliminarlo'),
                 OwnUser: errorResponse('Un admin no puede hacer esto con su propio usuario', 'No puedes hacer esto con tu propio usuario'),
                 UserOne: okResponse('Un usuario', { type: 'object', properties: { user: userSchema } }, { user: userExample }),
