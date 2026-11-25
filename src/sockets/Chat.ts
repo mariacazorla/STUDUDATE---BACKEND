@@ -34,6 +34,14 @@ export const emitDateUpdated = (date: { _id: unknown }) => {
     io?.to(roomOf(String(date._id))).emit('date:updated', date);
 };
 
+// La sala de los admin: entran al conectar y por ella les llegan las alertas del boton de ayuda al momento
+const ADMINS_ROOM = 'admins';
+
+// Envia algo a todos los admin conectados (las alertas nuevas y las atendidas)
+export const emitToAdmins = (event: 'alert:new' | 'alert:updated', payload: unknown) => {
+    io?.to(ADMINS_ROOM).emit(event, payload);
+};
+
 // El chat de los Dates va por socket.io, enganchado al mismo servidor HTTP que Express: la API y el
 // chat comparten puerto (y, en el servidor, nginx reenvia /socket.io al mismo contenedor).
 //
@@ -60,6 +68,12 @@ export const StartChat = (server: http.Server) => {
         // El middleware ya comprobo la identidad antes de dejar pasar esta conexion
         const userId = socket.data.user.id;
         Logging.info(`Socket conectado: usuario ${userId}`);
+
+        // Un admin entra en su sala nada mas conectar: asi el backoffice recibe las alertas de ayuda en
+        // tiempo real sin pedir nada. El rol sale del token, nunca de lo que mande el cliente
+        if (socket.data.user.role === 'admin') {
+            socket.join(ADMINS_ROOM);
+        }
 
         // El cliente pide entrar en la sala de un Date
         socket.on('date:join', async (payload) => {

@@ -7,6 +7,7 @@ import { GRADE_VALUES, GradeValue, IGrade } from '../models/Grade';
 import { MESSAGE_MAX_LENGTH } from '../models/Message';
 import { ISpin, MAX_SPINS, PLAN_STATUSES, PlanStatus } from '../models/Plan';
 import { REPORT_REASONS, REPORT_SEVERITIES, REPORT_STATUSES, ReportSeverity, ReportStatus } from '../models/Report';
+import { ALERT_STATUSES, AlertStatus } from '../models/SafetyAlert';
 import { IUser, MAX_TRUSTED_CONTACTS, PHOTO_MAX_LENGTH, USER_ROLES, UserRole } from '../models/User';
 
 // Cuantos elementos devuelve un listado si la peticion no dice limit. Esta en un solo sitio para
@@ -59,6 +60,13 @@ export interface ReportListQuery {
     status?: ReportStatus;
     severity?: ReportSeverity;
     reported?: string;
+}
+
+// Los filtros del listado de alertas del backoffice: la paginacion y el estado
+export interface AlertListQuery {
+    page: number;
+    limit: number;
+    status?: AlertStatus;
 }
 
 // Funcion que se encarga de validar los datos que llegan en una petición
@@ -230,6 +238,15 @@ export const Schemas = {
 
         // Solo los partes sobre este usuario
         reported: Joi.string().regex(OBJECT_ID)
+    }),
+
+    // Validacion de los filtros del listado de alertas
+    alertList: Joi.object<AlertListQuery>({
+        page: Joi.number().integer().min(1).default(1),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
+
+        // Solo las de un estado: open, attended o false_alarm
+        status: Joi.string().valid(...ALERT_STATUSES)
     }),
 
     // Validacion de los filtros del listado de votos
@@ -494,8 +511,20 @@ export const ValidatePlanList = (req: Request, res: Response, next: NextFunction
     next();
 };
 
+// Igual que ValidatePagination, pero con los filtros del listado de alertas
+export const ValidateAlertList = (req: Request, res: Response, next: NextFunction) => {
+    const { error, value } = Schemas.alertList.validate(req.query);
+
+    if (error) {
+        return res.status(400).json({ message: error.details[0].message });
+    }
+
+    res.locals.query = value;
+    next();
+};
+
 // Igual que ValidatePagination, pero con los filtros del listado de partes
-export const ValidateReportList = (req: Request, res: Response, next: NextFunction) => {
+export const ValidateReportList =(req: Request, res: Response, next: NextFunction) => {
     const { error, value } = Schemas.reportList.validate(req.query);
 
     if (error) {

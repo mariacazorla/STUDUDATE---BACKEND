@@ -316,6 +316,17 @@ const safetyAlertSchema = {
     }
 };
 
+const alertExample = {
+    _id: '6ab3f2fe9c500204a7d5ff81',
+    user: gradeExample.from,
+    date: dateExample._id,
+    type: 'sos',
+    message: 'Me siento incómoda, ¿podéis llamarme?',
+    status: 'open',
+    createdAt: '2026-11-03T20:10:00.000Z',
+    updatedAt: '2026-11-03T20:10:00.000Z'
+};
+
 const swaggerPath = (filePath: string) => filePath.replace(/\\/g, '/');
 
 const swaggerDocument = swaggerJsdoc({
@@ -340,7 +351,12 @@ const swaggerDocument = swaggerJsdoc({
             },
             { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' },
             { name: 'Blocks', description: 'Bloqueos del estudiante: a quién no quiere volver a ver (ni en La Orla ni en los chats)' },
-            { name: 'Reports', description: 'Partes: el estudiante los manda y solo el admin los ve y los revisa, con su gravedad' }
+            { name: 'Reports', description: 'Partes: el estudiante los manda y solo el admin los ve y los revisa, con su gravedad' },
+            {
+                name: 'Alerts',
+                description:
+                    'El botón de ayuda: el estudiante pide ayuda y los admin la reciben al momento (socket, eventos alert:new y alert:updated) y la atienden'
+            }
         ],
         // Por defecto todas las rutas piden el token (el candado de Swagger).
         // Las rutas públicas lo quitan con security: [] en su comentario @openapi.
@@ -489,6 +505,25 @@ const swaggerDocument = swaggerJsdoc({
                         }
                     },
                     { reports: [reportExample], total: 2, page: 1, pages: 1 }
+                ),
+                AlertOne: okResponse('Una alerta, con los datos de quien pide ayuda', { type: 'object', properties: { alert: safetyAlertSchema } }, { alert: alertExample }),
+                AlertCreated: okResponse(
+                    'La alerta creada y a cuántos contactos de confianza se ha avisado (0 si no tiene)',
+                    { type: 'object', properties: { alert: safetyAlertSchema, contactsNotified: { type: 'integer' } } },
+                    { alert: alertExample, contactsNotified: 2 }
+                ),
+                AlertList: okResponse(
+                    'Una página de alertas y los datos de paginación',
+                    {
+                        type: 'object',
+                        properties: {
+                            alerts: { type: 'array', items: safetyAlertSchema },
+                            total: { type: 'integer', example: 2 },
+                            page: { type: 'integer', example: 1 },
+                            pages: { type: 'integer', example: 1 }
+                        }
+                    },
+                    { alerts: [alertExample], total: 2, page: 1, pages: 1 }
                 ),
                 AlreadyBlocked: errorResponse('Ya había un bloqueo a esa persona', 'Ya tienes bloqueada a esta persona'),
                 NotArchived: errorResponse('Solo se puede eliminar para siempre un usuario archivado', 'Archiva el usuario antes de eliminarlo'),
