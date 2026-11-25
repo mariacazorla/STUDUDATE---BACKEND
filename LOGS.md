@@ -101,13 +101,38 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
     `chat:error { message }` (`No puedes entrar en este Date`, `Entra en el Date antes de escribir`, `Todavía no es tu turno: empieza la otra persona`,
     `Este Date está cerrado: ya no se puede escribir`, o el mensaje de Joi del texto).
   - Turno: en un Date `pending` solo escribe `firstTurn`; después del primer mensaje escriben los dos. En un Date `closed` se entra a leer, no a escribir.
-- **Modelos del Sprint 2** (ya en la base de datos y en Swagger; sus rutas llegan con cada funcionalidad):
-  - **Message**: `{ _id, date, from, text, readAt?, createdAt }`. `text` de 1 a 1000 caracteres. Llega por el socket y por `GET /dates/:dateId/messages`.
+- **Message**: `{ _id, date, from, text, readAt?, createdAt }`. `text` de 1 a 1000 caracteres. Llega por el socket y por `GET /dates/:dateId/messages`.
+- **Bloqueos** (`/blocks`, solo rol `user`; el que bloquea sale del token. A la persona bloqueada no se le avisa y no hay ruta con la que pueda saberlo):
   - **Block**: `{ _id, blocker, blocked, createdAt }`. Un solo bloqueo por pareja (blocker, blocked).
-  - **Report**: `{ _id, reporter, reported, date?, reason, text?, status, severity?, resolution?, reviewedBy?, reviewedAt?, createdAt, updatedAt }`. `reason` es `'harassment'`,
-    `'fake_profile'`, `'inappropriate'` u `'other'`; `status`, `'open'`, `'reviewed'` o `'dismissed'`; `severity` (`'low'`, `'medium'` o `'high'`) y `resolution` las pone el admin.
-  - **SafetyAlert**: `{ _id, user, date?, plan?, type, message?, status, attendedBy?, attendedAt?, createdAt, updatedAt }`. `type` es `'sos'`; `status`, `'open'`, `'attended'` o
-    `'false_alarm'`.
+  - `GET /blocks` responde `{ blocks }`, los míos, con `blocked` como `{ _id, name, degree?, photo? }`.
+  - `POST /blocks` con `{ blocked }` responde 201 `{ block, date }`: `date` es el Date que tenían los dos y se ha cerrado (`closedReason: 'blocked'`, `history`
+    con `by` quien bloqueó y `reason: 'Bloqueo'`; su sala recibe `date:updated`), o `null` si no había. 422 si es uno mismo, 404 si no existe o no es
+    estudiante, 409 si ya estaba bloqueado (`{ message: 'Ya tienes bloqueada a esta persona' }`).
+  - `DELETE /blocks/:userId` responde 204; 404 si no había bloqueo. El Date cerrado no se reabre.
+  - Con un bloqueo en cualquiera de los dos sentidos, ninguno le sale al otro en La Orla ni puede votarlo (403), y el chat del Date está cerrado.
+- **Partes** (`/reports`; mandarlo es del rol `user`, el resto solo `admin`: un estudiante que pida la lista o un parte recibe 403):
+  - **Report**: `{ _id, reporter, reported, date?, reason, text?, status, severity?, resolution?, reviewedBy?, reviewedAt?, createdAt, updatedAt }`. `reporter` y
+    `reported` llegan como `{ _id, name, email, photo? }`, también si están inactivos. `reason` es `'harassment'`, `'fake_profile'`, `'inappropriate'` u
+    `'other'`; `status`, `'open'`, `'reviewed'` o `'dismissed'`; `severity` (`'low'`, `'medium'` o `'high'`) y `resolution` las pone el admin.
+  - `POST /reports` con `{ reported, reason, date?, text? }` responde 201 `{ report }` abierto; 422 si es sobre uno mismo, si `reason` no vale o si `date` no es
+    un Date mío con esa persona (`{ message: 'Ese Date no es tuyo' }`); 404 si `reported` no existe.
+  - `GET /reports?page=&limit=&status=&severity=&reported=` responde `{ reports, total, page, pages }`, primero los más nuevos; 400 si un filtro no vale.
+  - `GET /reports/:reportId` responde `{ report }`; 404 si no existe.
+  - `PUT /reports/:reportId/review` con `{ status: 'reviewed' | 'dismissed', severity?, resolution? }` responde 200 `{ report }` con `reviewedBy` y
+    `reviewedAt`; `status: 'open'` da 422. Se puede volver a revisar (se sobreescriben gravedad, resolución, quién y cuándo).
+- **Botón de ayuda** (`/alerts`; pedir ayuda es del rol `user`, el resto solo `admin`):
+  - **SafetyAlert**: `{ _id, user, date?, plan?, type, message?, status, attendedBy?, attendedAt?, createdAt, updatedAt }`. `user` llega como
+    `{ _id, name, email, photo? }`. `type` es `'sos'`; `status`, `'open'`, `'attended'` o `'false_alarm'`.
+  - `POST /alerts` con `{ date?, plan?, message? }` (todo opcional) responde 201 `{ alert, contactsNotified }`: la alerta abierta y a cuántos contactos de
+    confianza se ha avisado (0 si no tiene: la alerta se crea igual y la ven los admin). 422 si `date` o `plan` no son míos. Los admin conectados reciben
+    la alerta al momento por el socket (`alert:new`); el aviso a los contactos es simulado (una línea en el log del servidor por contacto, como el email
+    de bienvenida).
+  - `GET /alerts?page=&limit=&status=` responde `{ alerts, total, page, pages }`, primero las más nuevas; 400 si el filtro no vale.
+  - `GET /alerts/:alertId` responde `{ alert }`; 404 si no existe.
+  - `PUT /alerts/:alertId/attend` con `{ status: 'attended' | 'false_alarm' }` responde 200 `{ alert }` con `attendedBy` y `attendedAt`; `'open'` da 422.
+    Los demás admin reciben `alert:updated`.
+  - **Socket de los admin**: al conectar, un socket con rol `admin` entra solo en la sala `admins` y recibe `alert:new <SafetyAlert>` y
+    `alert:updated <SafetyAlert>`. Un estudiante nunca los recibe.
 - **La Orla del estudiante** (`/orla`, solo rol `user`; el `from` sale siempre del token):
   - `GET /orla/next` responde `{ user, remaining }`: el siguiente Expediente (un estudiante activo, que no soy yo, al que no he votado y sin bloqueo entre
     los dos) con `{ _id, name, degree?, lookingFor?, bio?, photo?, birthDate? }`, y cuántos A+ me quedan hoy. Si no queda nadie, `user` es `null`.
@@ -182,6 +207,12 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 - [x] socket.io de vuelta, con el JWT comprobado al conectar · Diego
 - [x] Una sala por Date, turno de palabra y mensajes guardados (modelo Message) · Diego
 - [x] Historial: los mensajes paginados y cada cambio de estado del Date en su history, con quién y cuándo. Estados automáticos y sin Dates a mano · Diego
+
+#### Seguridad (`feat/seguridad`)
+
+- [x] Bloquear (modelo Block) y su filtro en La Orla y en los chats · Miguel Ángel
+- [x] Partes (modelo Report): solo los ve el admin, que les pone la gravedad y anota lo que ha hecho · María
+- [x] Botón de ayuda (modelo SafetyAlert): aviso a los admin al momento y a los contactos de confianza si los hay, y atenderla · Diego
 
 ## Bitácora
 
@@ -553,3 +584,28 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   entra en el `history` y la otra persona la recibe por el socket, la segunda da 409 y en un Date cerrado 409; un Date pendiente con `expiresAt` pasado
   lo cierra el servidor en la siguiente vuelta, la sala recibe `date:updated` con `closedReason: expired` y un `history` sin `by`, y ya no se puede escribir.
 - Prompt de IA usado: el del bloque "5 · Mis Dates y chat" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).
+
+### 2026-11-25 · Sprint 2: Seguridad (`feat/seguridad`)
+
+- **Bloquear** (`/blocks`, `BlockService`): un estudiante bloquea a otro y, si tenían un Date abierto, se cierra en el mismo paso (`closedReason:
+  'blocked'`, con el bloqueo en el `history` y aviso a la sala del chat con `date:updated`, así la otra persona ve el chat cerrado sin recargar pero
+  sin que se le diga que es un bloqueo). La Orla ya filtraba los bloqueos en los dos sentidos (bloque 3), y el chat no deja escribir en un Date
+  cerrado (bloque 5): con eso, ninguno vuelve a ver al otro. Desbloquear no reabre el Date. A la persona bloqueada no se le avisa y no hay ruta con
+  la que pueda saberlo.
+- **Partes** (`/reports`, `ReportService`): el estudiante manda el parte (motivo, comentario y, si viene del chat, el Date, que tiene que ser suyo con
+  esa persona) y solo el admin los lista (con filtros por estado, gravedad y persona), los ve y los revisa poniendo la gravedad y lo que ha hecho;
+  queda `reviewedBy` y `reviewedAt`. Un estudiante recibe 403 en todo lo que no sea mandarlo. Nada automático: el admin decide.
+- **Botón de ayuda** (`/alerts`, `SafetyAlertService`): todo opcional al pedir ayuda (quien la pide no está para formularios). Los admin conectados
+  la reciben al momento por el socket: al conectar, un socket con rol `admin` entra solo en la sala `admins` y le llegan `alert:new` y
+  `alert:updated` (al atenderla). Los contactos de confianza se avisan de forma simulada (una línea en el log por contacto, como el email de
+  bienvenida); sin contactos, la alerta se crea igual y `contactsNotified` es 0. Atender deja `attendedBy` y `attendedAt`.
+- Validación ejecutada: `npm run build` y `npm run lint` sin errores. Con la API, el seed recién hecho y `socket.io-client`, 43 comprobaciones, todas
+  correctas. Bloqueos (16): a uno mismo 422, a alguien inexistente o al admin 404, el admin 403; Laia bloquea a Pau y llega el Date cerrado por
+  bloqueo con su `history`, Pau lo recibe por el socket y ya no puede escribir; bloquear dos veces 409; la lista trae a Pau con su nombre; Pau no
+  puede votar a Laia y no ve ningún bloqueo; desbloquear 204 y después 404; el Date sigue cerrado. Partes (15): sobre uno mismo, motivo inválido y
+  Date ajeno 422; desde el chat 201 abierto con los dos usuarios; sin Date también; un estudiante 403 en la lista y en el detalle; el admin lista,
+  filtra por estado y por persona, un filtro inválido 400; revisar dejándolo abierto 422; revisar guarda gravedad, resolución, quién y cuándo;
+  inexistente 404. Ayuda (12): Date ajeno 422, admin 403; Laia (2 contactos) 201 con `contactsNotified: 2` y dos avisos en el log; el admin recibe
+  `alert:new` al momento y un estudiante no; Hugo sin contactos 201 con 0; la lista es solo del admin; atender guarda quién y cuándo y los admin
+  reciben `alert:updated`; reabrir 422.
+- Prompt de IA usado: el del bloque "6 · Seguridad" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).

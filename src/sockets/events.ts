@@ -51,6 +51,14 @@ export interface ServerToClientEvents {
 
     // Algo no se ha podido hacer (sala ajena, Date cerrado, no es tu turno, texto no valido...)
     'chat:error': (payload: { message: string }) => void;
+
+    // ---- Solo para los admin (sala 'admins', en la que entran al conectar) ----
+
+    // Alguien ha pulsado el boton de ayuda: la alerta, con quien la pide
+    'alert:new': (alert: unknown) => void;
+
+    // Una alerta ha cambiado (un admin la ha atendido): para que los demas admin lo vean sin recargar
+    'alert:updated': (alert: unknown) => void;
 }
 
 // Lo que el servidor guarda de cada socket: el usuario del token, que deja VerifySocketToken
