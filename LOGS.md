@@ -216,7 +216,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 
 #### Segundo despliegue y cierre (`feat/cierre`, `feat/documentacion`)
 
-- [ ] Segundo despliegue con todo y prueba de punta a punta en la web y en el móvil (pendiente del puerto que reenvía el proxy de la UPC) · Miguel Ángel
+- [x] Segundo despliegue con todo (https://ea3.upc.edu) y prueba de punta a punta en la web; el móvil contra el servidor queda para la demo con Expo Go · Miguel Ángel
 - [x] GitHub Actions: lint, build (y tests en el frontend) en cada push, en el backend y en el frontend · Diego
 - [x] LOGS y README de los repos al día · Miguel Ángel
 - [x] Diagrama de clases de la base de datos · María
@@ -636,3 +636,10 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
 - **Segundo despliegue**: preparado en STUDATE---DOCKER para el servidor detrás del proxy de la UPC (HTTPS lo termina el proxy; la VM sirve http y la
   API pone la cookie `Secure`). Queda hacerlo cuando se sepa a qué puerto de la máquina reenvía el proxy cada dominio.
 - Prompt de IA usado: el del bloque "9 · Segundo despliegue y cierre" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).
+
+### 2026-11-25 · Segundo despliegue en ea3
+
+- La API está desplegada con la web en `https://ea3.upc.edu` (proxy de la UPC → puerto 80 de la máquina `ea3` → nginx → `api:1337`), con
+  `REFRESH_COOKIE_PATH=/api/auth`, `COOKIE_SECURE=true` y `CORS_ORIGINS=https://ea3.upc.edu`. Comprobado desde fuera: `/api/ping`, login, refresh
+  al recargar, chat por socket.io (en polling, porque el proxy no deja pasar WebSocket), backoffice, y el 27017 cerrado. El guion y las lecciones del
+  despliegue están en el README de [STUDATE---DOCKER](https://github.com/mariacazorla/STUDATE---DOCKER).
