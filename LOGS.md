@@ -12,24 +12,31 @@ El tablero del sprint, con las horas, es el [GitHub Project de Studate](https://
 
 Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se cambia en los dos LOGS.md.
 
-- **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` y `POST /auth/logout` se autentican con la cookie del refresh token. `GET /ping` y la documentación
+- **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` y `POST /auth/logout` se autentican con el refresh token (en la cookie o, la app del móvil, en el body). `GET /ping` y la documentación
   (`/api-docs`) también son públicas. Todo lo demás exige token.
 - **Registro**: el cuerpo es `{ name, email, password }` (contraseña de 8 caracteres como mínimo; `role` no se acepta, todo usuario nuevo es `user`). Responde 201 con `{ user }` y **sin token**, 409
   si el email ya existe o 422 si el cuerpo no es válido. El frontend redirige entonces a la página de login.
 - **Login**: el cuerpo es `{ email, password }`. Responde `{ token, user }` o 401. `user` es `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña. El refresh token **no va en el
-  JSON**: se deja en la cookie `refreshToken` (HttpOnly, SameSite=Strict, Path=/auth, Max-Age de 7 días; Secure en producción).
-- **Refresh**: sin cuerpo. Lee el refresh token de la cookie y responde `{ token }` (un access token nuevo), o 401 si no hay cookie, ha caducado o no es válida. El refresh token no cambia.
-- **Logout**: sin cuerpo. Borra la cookie y responde 204. Después, `/auth/refresh` responde 401.
-- **Cookies y CORS**: el frontend llama a `/auth/*` con `withCredentials: true`; el backend responde con `Access-Control-Allow-Credentials: true` y el origen exacto de `CORS_ORIGIN` (no vale `*`).
+  JSON**: se deja en la cookie `refreshToken` (HttpOnly, SameSite=Strict, Path=/auth, Max-Age de 7 días; Secure en producción). La ruta y el Secure de la cookie se
+  cambian con `REFRESH_COOKIE_PATH` (detrás de nginx, `/api/auth`) y `COOKIE_SECURE`.
+- **Login desde la app del móvil**: la misma ruta con la cabecera `X-Client: movil`. Responde `{ token, refreshToken, user }` y **no pone cookie**: la app guarda el refresh
+  token en el almacén cifrado del teléfono.
+- **Refresh**: la web no manda cuerpo y se lee el refresh token de la cookie; la app del móvil manda `{ refreshToken }` en el cuerpo. Si llegan los dos, se usa el del
+  cuerpo. Responde `{ token }` (un access token nuevo), o 401 si no hay refresh token, ha caducado o no es válido; 422 si `refreshToken` no es un texto. El refresh token no cambia.
+- **Logout**: sin cuerpo. Borra la cookie y responde 204. Después, `/auth/refresh` responde 401. La app del móvil cierra sesión borrando su refresh token.
+- **Cookies y CORS**: la web llama a la API con `credentials: 'include'`; el backend responde con `Access-Control-Allow-Credentials: true` y el origen de la petición si está
+  en la lista de `CORS_ORIGINS` (por defecto `http://localhost:5173` y `http://localhost:8081`; no vale `*`). Las peticiones sin `Origin` (la app del móvil) no pasan por CORS.
+- **Paginación**: todos los listados aceptan `page` y `limit` (de 1 a 100) y, si no se dice `limit`, devuelven **10** elementos por página.
 - **Token**: se envía en la cabecera `Authorization: Bearer <token>`. Su payload lleva los claims `sub` (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días.
-  El frontend guarda el access token solo en memoria (una signal), nunca en `localStorage` ni `sessionStorage`; al recargar la página lo recupera llamando a `/auth/refresh` y después a `/users/me`.
+  El frontend guarda el access token solo en memoria, nunca en `localStorage` ni `sessionStorage`; al recargar la página lo recupera llamando a `/auth/refresh` y después a `/users/me`.
 - **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`) o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol
   necesario.
 - **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
 - **Con quién abrir un Date**: `GET /users/directory` (con sesión, cualquier rol) responde `{ users: [{ _id, name, degree?, photo? }] }`: los demás usuarios
   de rol `user` activos, ordenados por nombre.
 - **Usuario**: `{ _id, name, email, role, birthDate?, degree?, lookingFor?, bio?, photo?, active, deleted, deletedAt?, createdAt, updatedAt }`, nunca con
-  contraseña. `photo` es una imagen PNG o JPG en base64 (`data:image/...;base64,...`, 200 000 caracteres como mucho).
+  contraseña. `photo` es una imagen PNG o JPG en base64 (`data:image/...;base64,...`, 200 000 caracteres como mucho). Los contactos de confianza
+  (`trustedContacts`: hasta 3, cada uno `{ name, email, phone? }`) son privados y **no van** en el usuario: ninguna respuesta de hoy los incluye.
 - **Usuarios inactivos y archivados**: no pueden iniciar sesión ni renovar el token (401 con el mensaje de siempre). Lo hace el prehook del modelo.
   Si ya tenían sesión, cualquier petición con su token responde 401 `{ message: 'Tu cuenta no está activa' }` y el frontend cierra la sesión.
 - **Gestión de usuarios** (solo `admin`):
@@ -45,7 +52,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
   - `POST /users/:userId/restore` responde 200 `{ user }`; 404 si no existe o no estaba archivado.
   - `DELETE /users/:userId` (borrado físico) responde 204. Solo con usuarios archivados: si no, 409 `{ message: 'Archiva el usuario antes de eliminarlo' }`.
   - Un admin no puede cambiarse su propio rol, desactivarse, archivarse ni eliminarse: 403 `{ message: 'No puedes hacer esto con tu propio usuario' }`.
-  - Al eliminar un usuario para siempre se borran también sus votos de La Orla y sus Dates.
+  - Al eliminar un usuario para siempre se borran también sus votos de La Orla, sus Dates (con el Plan y los mensajes de cada uno), sus bloqueos, sus partes y sus alertas.
 - **Voto de La Orla (Grade)**: `{ _id, from, to, value, createdAt, updatedAt }`. `from` (quien vota) y `to` (a quien) llegan como
   `{ _id, name, email, photo? }`, también si el usuario está inactivo. `value` es `'A+'` o `'F'`. Un solo voto por pareja (from, to).
 - **Votos de La Orla** (solo `admin`):
@@ -56,9 +63,11 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
     (`{ message: 'Un usuario no se puede votar a sí mismo' }`) o el cuerpo no vale; 404 si `from` o `to` no existen.
   - `PUT /grades/:gradeId` con `{ value }` responde 200 `{ grade }`. `DELETE /grades/:gradeId` responde 204 (borrado físico).
   - Si al crear un A+ o al cambiar un voto a A+ ya existe el A+ contrario, se abre un Date entre los dos (si no lo había ya).
-- **Date**: `{ _id, users, status, firstTurn, expiresAt, extended, createdAt, updatedAt }`. `users` son los dos usuarios como `{ _id, name, email,
-  photo? }`; `status` es `'pending'` (Pendiente), `'ongoing'` (En curso) o `'closed'` (Cerrado); `firstTurn` es el id del usuario al que le toca
-  escribir primero (sorteado); `expiresAt` es 24 horas después de abrirse; `extended` dice si ya se usó la prórroga. Un solo Date por pareja.
+- **Date**: `{ _id, users, status, firstTurn, expiresAt, extended, startedAt?, closedAt?, closedReason?, history, createdAt, updatedAt }`. `users` son los dos
+  usuarios como `{ _id, name, email, photo? }`; `status` es `'pending'` (Pendiente), `'ongoing'` (En curso) o `'closed'` (Cerrado); `firstTurn` es el id del usuario al que
+  le toca escribir primero (sorteado); `expiresAt` es 24 horas después de abrirse; `extended` dice si ya se usó la prórroga. Un solo Date por pareja.
+  `startedAt` es cuándo pasó a En curso; `closedAt` y `closedReason` (`'expired'`, `'blocked'` o `'admin'`), cuándo y por qué se cerró. `history` es la lista de cambios
+  de estado, `[{ status, by?, reason?, at }]`, del más antiguo al más nuevo; sin `by`, lo hizo el servidor. Todo Date nace con la entrada `pending`.
 - **Dates** (cualquier usuario con sesión; el admin ve todos y un usuario normal solo los suyos):
   - `GET /dates?page=&limit=&status=&user=` responde `{ dates, total, page, pages }`, primero los más nuevos. `user` solo lo usa el admin.
   - `GET /dates/:dateId` responde `{ date }`; 404 si no existe o es de otros.
@@ -67,7 +76,14 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
   - `PUT /dates/:dateId` con `{ status }` responde 200 `{ date }`; 404 si no existe o es de otros.
   - `POST /dates/:dateId/extend` suma 24 horas a `expiresAt` y pone `extended: true`; 409 si ya se usó
     (`{ message: 'La prórroga de este Date ya se ha usado' }`).
-  - `DELETE /dates/:dateId` (solo admin) responde 204.
+  - `DELETE /dates/:dateId` (solo admin) responde 204. Con el Date se borran su Plan y sus mensajes.
+- **Modelos del Sprint 2** (ya en la base de datos y en Swagger; sus rutas llegan con cada funcionalidad):
+  - **Message**: `{ _id, date, from, text, readAt?, createdAt }`. `text` de 1 a 1000 caracteres.
+  - **Block**: `{ _id, blocker, blocked, createdAt }`. Un solo bloqueo por pareja (blocker, blocked).
+  - **Report**: `{ _id, reporter, reported, date?, reason, text?, status, severity?, resolution?, reviewedBy?, reviewedAt?, createdAt, updatedAt }`. `reason` es `'harassment'`,
+    `'fake_profile'`, `'inappropriate'` u `'other'`; `status`, `'open'`, `'reviewed'` o `'dismissed'`; `severity` (`'low'`, `'medium'` o `'high'`) y `resolution` las pone el admin.
+  - **SafetyAlert**: `{ _id, user, date?, plan?, type, message?, status, attendedBy?, attendedAt?, createdAt, updatedAt }`. `type` es `'sos'`; `status`, `'open'`, `'attended'` o
+    `'false_alarm'`.
 
 ## Tareas
 
@@ -104,6 +120,15 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 
 - [ ] Planning, seguimiento y retrospectiva · los tres
 - [ ] Preparar la demo del sprint · Diego y María
+
+### Sprint 2
+
+#### Estructura (`feat/estructura`)
+
+- [x] Sesión para la web, Docker y el móvil: CORS con varios orígenes, cookie del refresh configurable y refresh también en el body · María
+- [x] Modelos Message, Block, Report y SafetyAlert, con sus índices y su validación con Joi · Miguel Ángel
+- [x] Campos nuevos (contactos de confianza, historial y cierre de los Dates) y paginación de 10 por página · Miguel Ángel
+- [x] Seed con datos de ejemplo de lo nuevo, Swagger y LOGS · Miguel Ángel
 
 ## Bitácora
 
@@ -364,3 +389,37 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   los esquemas. Las llamadas se han probado con curl, no desde los botones de la página.
 - Prompt de IA usado: «Toca montar la documentación de la API en Swagger. Ya has visto cómo lo hacemos: Joi conectado con Swagger.
   Simplemente sería ampliarlo con todo lo nuevo.»
+
+### 2026-11-25 · Sprint 2: la estructura (`feat/estructura`)
+
+- El Sprint 2 cambia el frontend: el backoffice en Angular se rehace en React y aparecen la web del estudiante y la app del móvil. Esta rama deja
+  el backend preparado para los tres antes de hacer ninguna pantalla.
+- **Sesión para la web, Docker y el móvil.** `CORS_ORIGIN` pasa a ser `CORS_ORIGINS`, una lista separada por comas (por defecto, la web de Vite en el
+  5173 y Expo en el navegador en el 8081); al paquete `cors` se le pasa la lista y él responde solo a esos orígenes. La cookie del refresh token
+  tiene la ruta y el `Secure` configurables (`REFRESH_COOKIE_PATH` y `COOKIE_SECURE`): en el servidor, nginx servirá la API detrás de `/api` y el
+  navegador solo envía la cookie si su ruta es `/api/auth`. La app del móvil no tiene cookies HttpOnly: con la cabecera `X-Client: movil`, el login
+  le devuelve el refresh token en el JSON, y `/auth/refresh` lo acepta en el body. La web sigue exactamente igual.
+- Dos decisiones que no estaban en el plan: con `X-Client: movil` no se pone cookie, y en el refresh manda el body sobre la cookie. Un teléfono
+  también guarda cookies; si mandara la cookie, una de una sesión anterior podría renovar la cuenta equivocada.
+- **Modelos nuevos**: `Message`, `Block`, `Report` y `SafetyAlert`, según el plan de la base de datos. Índices: `(date, createdAt)` en los
+  mensajes y único `(blocker, blocked)` en los bloqueos. Llevan ya sus esquemas de Joi; en ninguno se acepta quién hace la petición, que saldrá
+  siempre del token. Todavía no tienen rutas: llegan con el chat y con la seguridad.
+- **Campos nuevos**: `User.trustedContacts` (opcionales, hasta 3). Son datos privados y de personas que no usan Studate, así que van con
+  `select: false`, como la contraseña: no salen en ninguna consulta si no se piden a propósito. `Date` gana `startedAt`, `closedAt`,
+  `closedReason` e `history`; `createDate` escribe ya la primera entrada (`pending`) y el resto de cambios de estado se registrarán cuando
+  llegue el chat. Índice `(status, expiresAt)` para el cierre de los caducados.
+- **Paginación de 10**: el valor por defecto de `limit` está en una constante (`PAGE_SIZE`) que usan los cinco listados.
+- **Arreglo de algo anterior**: al eliminar un usuario para siempre se borraban sus Dates, pero no los Planes de esos Dates, que se quedaban
+  apuntando a un Date que ya no existe. Ahora con cada Date se borran su Plan y sus mensajes, y con el usuario, además, sus bloqueos, sus partes
+  y sus alertas.
+- **Seed**: dos usuarios con contactos de confianza, el Date en curso con su historial y cuatro mensajes, el Date cerrado con su motivo, un
+  bloqueo, dos partes (uno abierto y otro revisado con su gravedad) y dos alertas (una abierta y otra atendida). `npm run seed -- --reset` borra
+  también las colecciones nuevas.
+- Validación ejecutada: `npm run build` y `npm run lint` sin errores. Con curl contra la API y el seed recién hecho: el preflight desde
+  `localhost:5173` trae `Access-Control-Allow-Origin` y desde `localhost:4200` no; el login de la web pone la cookie y no trae `refreshToken`
+  en el JSON; el del móvil (`X-Client: movil`) lo trae y no pone cookie; el refresh responde 200 con la cookie, 200 con el body, 401 sin nada,
+  401 con un token falso y 422 si `refreshToken` no es un texto; con cookie de un usuario y body de otro, el token nuevo es del usuario del
+  body. `GET /users` y `GET /grades` sin `limit` devuelven 10 elementos. En MongoDB están las cuatro colecciones nuevas con sus índices. Al
+  eliminar un usuario con un Date y un Plan no queda ningún Plan huérfano. El login no devuelve los contactos de confianza. El documento de
+  Swagger tiene los esquemas nuevos, el parámetro `X-Client` del login y los dos modos del refresh.
+- Prompt de IA usado: el del bloque "Estructura" del Sprint 2, que está entero en [AI_LOG.md](AI_LOG.md).

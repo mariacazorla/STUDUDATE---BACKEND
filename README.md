@@ -17,7 +17,7 @@ El proyecto parte del ejercicio del Seminario 7 (JWT, refresh token en cookie Ht
 WebSockets), que se guarda tal cual en el tag `seminari7-base`. De ahí se trae la autenticación, la
 estructura en capas y la forma de hacer la paginación, el borrado lógico y Swagger.
 
-El frontend Angular que consume esta API está en
+El frontend que consume esta API (la web en React y la app del móvil) está en
 [STUDATE---FRONTEND](https://github.com/mariacazorla/STUDATE---FRONTEND).
 
 Las tareas del sprint, el contrato con el frontend y la bitácora están en [LOGS.md](LOGS.md); cómo
@@ -161,7 +161,12 @@ src/
   models/          Esquemas de Mongoose y las interfaces de cada recurso
     User.ts          Usuario, y las interfaces de los tokens (payload) y de req.user
     Grade.ts         Voto de La Orla (A+ o F de un usuario a otro)
-    Date.ts          Date (cita entre dos usuarios); se importa como DateModel
+    Date.ts          Date (cita entre dos usuarios) con su historial; se importa como DateModel
+    Plan.ts          Plan (el Cambio de Aula de un Date) con las tiradas de la ruleta
+    Message.ts       Mensaje del chat de un Date
+    Block.ts         Bloqueo de un usuario a otro
+    Report.ts        Parte sobre un usuario, que revisa un admin
+    SafetyAlert.ts   Alerta del botón de ayuda
   utils/           Funciones pequeñas sin dependencias de Express
     password.ts      Cifra y comprueba contraseñas con scrypt
     escape-regexp.ts Escapa el texto de una búsqueda para usarlo en una expresión regular

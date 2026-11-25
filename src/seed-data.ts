@@ -1,5 +1,7 @@
 import { GradeValue } from './models/Grade';
 import type { PlanStatus } from './models/Plan';
+import type { ReportReason, ReportSeverity, ReportStatus } from './models/Report';
+import type { AlertStatus } from './models/SafetyAlert';
 import { IUser } from './models/User';
 
 // Datos de ejemplo para llenar la base de datos.
@@ -18,6 +20,7 @@ const SISTEMES_AERO = 'Grau en Enginyeria de Sistemes Aeroespacials';
 // Un admin, un usuario normal para probar y doce estudiantes.
 // Hay dos inactivos (active: false) y dos archivados (deleted: true) para poder probar
 // el prehook de "está activo" y el borrado lógico.
+// Laia y Usuario tienen contactos de confianza (son opcionales: el resto no tiene ninguno).
 export const usersSeed: IUser[] = [
     {
         name: 'Admin Studate',
@@ -36,6 +39,7 @@ export const usersSeed: IUser[] = [
         degree: TELEMATICA,
         lookingFor: 'Alguien con quien estudiar',
         birthDate: new Date('2004-05-12'),
+        trustedContacts: [{ name: 'Carla (compañera de piso)', email: 'carla.piso@example.com' }],
         active: true,
         deleted: false
     },
@@ -48,6 +52,10 @@ export const usersSeed: IUser[] = [
         lookingFor: 'Tomar algo después de clase',
         bio: 'Siempre en la biblioteca de la EETAC, casi siempre con café.',
         birthDate: new Date('2003-02-20'),
+        trustedContacts: [
+            { name: 'Marta Puig (hermana)', email: 'marta.puig@example.com', phone: '600 111 222' },
+            { name: 'Joan (compañero de piso)', email: 'joan.piso@example.com' }
+        ],
         active: true,
         deleted: false
     },
@@ -260,4 +268,80 @@ export const plansSeed: PlanSeed[] = [
         archived: true,
         spins: [{ place: 'Pizzeria del campus', walkingMinutes: 6, inDays: 1, hour: 21 }]
     }
+];
+
+// ---- Sprint 2: chat, bloqueos, partes y alertas ----
+// Como en los Planes, cada dato dice de que pareja o de que usuario es con sus emails.
+
+// Mensajes del chat del Date en curso (Laia y Pau). No se sabe de antemano quien de los dos empieza,
+// porque el primer turno se sortea al abrir el Date: fromFirstTurn dice si el mensaje es de quien tiene
+// el turno o de la otra persona. minutesAgo es hace cuanto se envio, para que salgan en orden.
+export const CHAT_USERS: [string, string] = ['laia@example.com', 'pau@example.com'];
+
+export interface MessageSeed {
+    fromFirstTurn: boolean;
+    text: string;
+    minutesAgo: number;
+}
+
+export const messagesSeed: MessageSeed[] = [
+    { fromFirstTurn: true, text: '¡Hola! Me ha tocado empezar a mí. ¿Qué tal los parciales?', minutesAgo: 120 },
+    { fromFirstTurn: false, text: 'Sobreviviendo. Me queda Redes el jueves y soy libre.', minutesAgo: 112 },
+    { fromFirstTurn: true, text: 'Pues el jueves por la tarde lo celebramos. ¿Un café en la EETAC?', minutesAgo: 105 },
+    { fromFirstTurn: false, text: 'Hecho. Le doy a la ruleta a ver qué sitio nos sale.', minutesAgo: 98 }
+];
+
+// Bloqueos. Clara ha bloqueado a Hugo (ya se habían puesto una F el uno al otro)
+export interface BlockSeed {
+    blocker: string;
+    blocked: string;
+}
+
+export const blocksSeed: BlockSeed[] = [{ blocker: 'clara@example.com', blocked: 'hugo@example.com' }];
+
+// Partes. Uno abierto, mandado desde el chat de un Date, y otro (sin Date) ya revisado por el admin, con su
+// gravedad y lo que se hizo. fromDate: el parte se mando desde el chat del Date que tienen los dos
+export interface ReportSeed {
+    reporter: string;
+    reported: string;
+    fromDate?: boolean;
+    reason: ReportReason;
+    text?: string;
+    status: ReportStatus;
+    severity?: ReportSeverity;
+    resolution?: string;
+}
+
+export const reportsSeed: ReportSeed[] = [
+    {
+        reporter: 'julia@example.com',
+        reported: 'hugo@example.com',
+        fromDate: true,
+        reason: 'inappropriate',
+        text: 'Me ha escrito cosas fuera de lugar nada más abrir el chat.',
+        status: 'open'
+    },
+    {
+        reporter: 'nerea@example.com',
+        reported: 'marc@example.com',
+        reason: 'harassment',
+        text: 'Me escribe por otras redes aunque le dije que no me interesaba.',
+        status: 'reviewed',
+        severity: 'medium',
+        resolution: 'Aviso al usuario. Si se repite, se desactiva la cuenta.'
+    }
+];
+
+// Alertas del boton de ayuda. Una abierta (para verla llegar en el backoffice) y otra ya atendida.
+// with: la otra persona del Date desde el que se pidio ayuda
+export interface AlertSeed {
+    user: string;
+    with: string;
+    message?: string;
+    status: AlertStatus;
+}
+
+export const alertsSeed: AlertSeed[] = [
+    { user: 'laia@example.com', with: 'pau@example.com', message: 'Me siento incómoda, ¿podéis llamarme?', status: 'open' },
+    { user: 'user@example.com', with: 'oriol@example.com', status: 'attended' }
 ];

@@ -2,7 +2,11 @@ import path from 'node:path';
 import swaggerJsdoc from 'swagger-jsdoc';
 import j2s from 'joi-to-swagger';
 import { Schemas } from '../middleware/Joi';
+import { DATE_CLOSED_REASONS, DATE_STATUSES } from '../models/Date';
 import { PLAN_STATUSES } from '../models/Plan';
+import { REPORT_REASONS, REPORT_SEVERITIES, REPORT_STATUSES } from '../models/Report';
+import { ALERT_STATUSES, ALERT_TYPES } from '../models/SafetyAlert';
+import { MAX_TRUSTED_CONTACTS } from '../models/User';
 import { config } from './config';
 
 // La documentación de cada endpoint está escrita en un comentario /** @openapi */
@@ -21,6 +25,12 @@ const { swagger: dateInput } = j2s(Schemas.date.create);
 const { swagger: dateUpdateInput } = j2s(Schemas.date.update);
 const { swagger: planInput } = j2s(Schemas.plan.create);
 const { swagger: planUpdateInput } = j2s(Schemas.plan.update);
+const { swagger: messageInput } = j2s(Schemas.message.create);
+const { swagger: blockInput } = j2s(Schemas.block.create);
+const { swagger: reportInput } = j2s(Schemas.report.create);
+const { swagger: reportReviewInput } = j2s(Schemas.report.review);
+const { swagger: safetyAlertInput } = j2s(Schemas.safetyAlert.create);
+const { swagger: safetyAlertAttendInput } = j2s(Schemas.safetyAlert.attend);
 
 // Lo que devuelve la API no es igual a lo que se envía: lleva el _id y las fechas que
 // pone MongoDB, y el usuario nunca devuelve la contraseña.
@@ -49,6 +59,19 @@ const userSchema = {
         deleted: { type: 'boolean', description: 'true si el usuario está archivado' },
         deletedAt: { type: 'string', format: 'date-time' }
     }
+};
+
+// Un contacto de confianza. Son datos privados: no van dentro del usuario en ninguna respuesta normal
+// (select: false en el modelo), solo donde se pidan a propósito
+const trustedContactSchema = {
+    type: 'object',
+    description: `Contacto de confianza para el botón de ayuda. Opcionales, ${MAX_TRUSTED_CONTACTS} como mucho por usuario`,
+    properties: {
+        name: { type: 'string', maxLength: 100, example: 'Marta Puig (hermana)' },
+        email: { type: 'string', format: 'email', example: 'marta.puig@example.com' },
+        phone: { type: 'string', maxLength: 20, example: '600 111 222' }
+    },
+    required: ['name', 'email']
 };
 
 // Una respuesta correcta: el esquema de lo que se devuelve y un ejemplo con datos de verdad
@@ -111,16 +134,31 @@ const gradeExample = {
     updatedAt: '2026-11-03T10:00:00.000Z'
 };
 
+// Una entrada del historial de un Date: un cambio de estado, quién lo hizo y cuándo
+const dateEventSchema = {
+    type: 'object',
+    properties: {
+        status: { type: 'string', enum: [...DATE_STATUSES], description: 'El estado al que pasó el Date' },
+        by: { type: 'string', description: 'Id de quien hizo el cambio. Si no viene, lo hizo el servidor' },
+        reason: { type: 'string', maxLength: 200 },
+        at: { type: 'string', format: 'date-time' }
+    }
+};
+
 // Un Date: users llega con los datos de los dos usuarios; firstTurn es el id del que escribe primero
 const dateSchema = {
     type: 'object',
     properties: {
         ...storedFields,
         users: { type: 'array', items: userSummary },
-        status: { type: 'string', enum: ['pending', 'ongoing', 'closed'] },
+        status: { type: 'string', enum: [...DATE_STATUSES] },
         firstTurn: { type: 'string', description: 'Id del usuario al que le toca escribir primero' },
         expiresAt: { type: 'string', format: 'date-time' },
-        extended: { type: 'boolean', description: 'Si ya se ha usado la prórroga' }
+        extended: { type: 'boolean', description: 'Si ya se ha usado la prórroga' },
+        startedAt: { type: 'string', format: 'date-time', description: 'Cuándo pasó a En curso (el primer mensaje)' },
+        closedAt: { type: 'string', format: 'date-time' },
+        closedReason: { type: 'string', enum: [...DATE_CLOSED_REASONS], description: 'Por qué se cerró' },
+        history: { type: 'array', items: dateEventSchema, description: 'Cada cambio de estado, del más antiguo al más nuevo' }
     }
 };
 
@@ -131,6 +169,7 @@ const dateExample = {
     firstTurn: '6ab3f2fe9c500204a7d5f8a4',
     expiresAt: '2026-11-04T10:00:00.000Z',
     extended: false,
+    history: [{ status: 'pending', reason: 'A+ mutuo', at: '2026-11-03T10:00:00.000Z' }],
     createdAt: '2026-11-03T10:00:00.000Z',
     updatedAt: '2026-11-03T10:00:00.000Z'
 };
@@ -157,7 +196,7 @@ const planSchema = {
             properties: {
                 _id: { type: 'string' },
                 users: { type: 'array', items: userSummary },
-                status: { type: 'string', enum: ['pending', 'ongoing', 'closed'] },
+                status: { type: 'string', enum: [...DATE_STATUSES] },
                 expiresAt: { type: 'string', format: 'date-time' }
             }
         },
@@ -185,6 +224,66 @@ const planExample = {
     deleted: false,
     createdAt: '2026-11-05T10:00:00.000Z',
     updatedAt: '2026-11-05T10:00:00.000Z'
+};
+
+// ---- Modelos del Sprint 2. Todavía no tienen rutas: aquí queda documentado qué forma tienen ----
+
+// Un mensaje del chat de un Date
+const messageSchema = {
+    type: 'object',
+    properties: {
+        _id: storedFields._id,
+        date: { type: 'string', description: 'Id del Date (la sala del chat)' },
+        from: { type: 'string', description: 'Id de quien lo ha escrito' },
+        text: { type: 'string', maxLength: 1000 },
+        readAt: { type: 'string', format: 'date-time', description: 'Cuándo lo leyó la otra persona' },
+        createdAt: storedFields.createdAt
+    }
+};
+
+// Un bloqueo: quién bloquea y a quién
+const blockSchema = {
+    type: 'object',
+    properties: {
+        _id: storedFields._id,
+        blocker: { type: 'string', description: 'Id de quien bloquea' },
+        blocked: { type: 'string', description: 'Id del usuario bloqueado' },
+        createdAt: storedFields.createdAt
+    }
+};
+
+// Un parte sobre un usuario. Solo lo ve el admin, que le pone la gravedad y anota lo que ha hecho
+const reportSchema = {
+    type: 'object',
+    properties: {
+        ...storedFields,
+        reporter: userSummary,
+        reported: userSummary,
+        date: { type: 'string', description: 'Id del Date, si el parte se mandó desde un chat' },
+        reason: { type: 'string', enum: [...REPORT_REASONS] },
+        text: { type: 'string', maxLength: 500 },
+        status: { type: 'string', enum: [...REPORT_STATUSES] },
+        severity: { type: 'string', enum: [...REPORT_SEVERITIES], description: 'La pone el admin al revisarlo' },
+        resolution: { type: 'string', maxLength: 500, description: 'Lo que ha hecho el admin' },
+        reviewedBy: { type: 'string', description: 'Id del admin que lo revisó' },
+        reviewedAt: { type: 'string', format: 'date-time' }
+    }
+};
+
+// Una alerta del botón de ayuda. Queda guardado qué admin la atendió y cuándo
+const safetyAlertSchema = {
+    type: 'object',
+    properties: {
+        ...storedFields,
+        user: userSummary,
+        date: { type: 'string', description: 'Id del Date desde el que se pidió ayuda' },
+        plan: { type: 'string', description: 'Id del Plan desde el que se pidió ayuda' },
+        type: { type: 'string', enum: [...ALERT_TYPES] },
+        message: { type: 'string', maxLength: 300 },
+        status: { type: 'string', enum: [...ALERT_STATUSES] },
+        attendedBy: { type: 'string', description: 'Id del admin que la atendió' },
+        attendedAt: { type: 'string', format: 'date-time' }
+    }
 };
 
 const swaggerPath = (filePath: string) => filePath.replace(/\\/g, '/');
@@ -234,7 +333,19 @@ const swaggerDocument = swaggerJsdoc({
                 Date: dateSchema,
                 PlanInput: planInput,
                 PlanUpdateInput: planUpdateInput,
-                Plan: planSchema
+                Plan: planSchema,
+                TrustedContact: trustedContactSchema,
+                DateEvent: dateEventSchema,
+                MessageInput: messageInput,
+                Message: messageSchema,
+                BlockInput: blockInput,
+                Block: blockSchema,
+                ReportInput: reportInput,
+                ReportReviewInput: reportReviewInput,
+                Report: reportSchema,
+                SafetyAlertInput: safetyAlertInput,
+                SafetyAlertAttendInput: safetyAlertAttendInput,
+                SafetyAlert: safetyAlertSchema
             },
             responses: {
                 LoginOk: okResponse(
