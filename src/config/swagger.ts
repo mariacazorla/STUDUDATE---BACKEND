@@ -288,6 +288,18 @@ const reportSchema = {
     }
 };
 
+const reportExample = {
+    _id: '6ab3f2fe9c500204a7d5ff01',
+    reporter: gradeExample.from,
+    reported: gradeExample.to,
+    date: dateExample._id,
+    reason: 'inappropriate',
+    text: 'Me ha escrito cosas fuera de lugar nada más abrir el chat.',
+    status: 'open',
+    createdAt: '2026-11-03T13:00:00.000Z',
+    updatedAt: '2026-11-03T13:00:00.000Z'
+};
+
 // Una alerta del botón de ayuda. Queda guardado qué admin la atendió y cuándo
 const safetyAlertSchema = {
     type: 'object',
@@ -327,7 +339,8 @@ const swaggerDocument = swaggerJsdoc({
                     'Citas entre dos usuarios que se han dado A+ (el admin ve todas; un usuario, las suyas) y el historial de su chat. Los mensajes en tiempo real van por socket.io (eventos date:join, date:message, date:read, date:updated), con el mismo token en el handshake'
             },
             { name: 'Plans', description: 'Cambio de Aula: los Planes de un Date con las tiradas de la ruleta (solo admin)' },
-            { name: 'Blocks', description: 'Bloqueos del estudiante: a quién no quiere volver a ver (ni en La Orla ni en los chats)' }
+            { name: 'Blocks', description: 'Bloqueos del estudiante: a quién no quiere volver a ver (ni en La Orla ni en los chats)' },
+            { name: 'Reports', description: 'Partes: el estudiante los manda y solo el admin los ve y los revisa, con su gravedad' }
         ],
         // Por defecto todas las rutas piden el token (el candado de Swagger).
         // Las rutas públicas lo quitan con security: [] en su comentario @openapi.
@@ -462,6 +475,20 @@ const swaggerDocument = swaggerJsdoc({
                     'Mis bloqueos, con los datos de cada persona bloqueada',
                     { type: 'object', properties: { blocks: { type: 'array', items: blockSchema } } },
                     { blocks: [blockExample] }
+                ),
+                ReportOne: okResponse('Un parte, con los datos de los dos usuarios', { type: 'object', properties: { report: reportSchema } }, { report: reportExample }),
+                ReportList: okResponse(
+                    'Una página de partes y los datos de paginación',
+                    {
+                        type: 'object',
+                        properties: {
+                            reports: { type: 'array', items: reportSchema },
+                            total: { type: 'integer', example: 2 },
+                            page: { type: 'integer', example: 1 },
+                            pages: { type: 'integer', example: 1 }
+                        }
+                    },
+                    { reports: [reportExample], total: 2, page: 1, pages: 1 }
                 ),
                 AlreadyBlocked: errorResponse('Ya había un bloqueo a esa persona', 'Ya tienes bloqueada a esta persona'),
                 NotArchived: errorResponse('Solo se puede eliminar para siempre un usuario archivado', 'Archiva el usuario antes de eliminarlo'),

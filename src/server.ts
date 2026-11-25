@@ -14,6 +14,7 @@ import dateRoutes from './routes/Date';
 import gradeRoutes from './routes/Grade';
 import orlaRoutes from './routes/Orla';
 import planRoutes from './routes/Plan';
+import reportRoutes from './routes/Report';
 import { StartChat } from './sockets/Chat';
 import swaggerUi from 'swagger-ui-express'; // permite mostrar Swagger en el navegador.
 import swaggerDocument from './config/swagger'; // importa el documento que hemos creado en swagger.ts
@@ -53,6 +54,7 @@ const StartServer = () => {
     router.use('/dates', dateRoutes);
     router.use('/plans', planRoutes);
     router.use('/blocks', blockRoutes);
+    router.use('/reports', reportRoutes);
 
     // La documentacion y el healthcheck son publicos
     router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
