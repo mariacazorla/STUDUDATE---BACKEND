@@ -9,6 +9,10 @@ import { ISpin, MAX_SPINS, PLAN_STATUSES, PlanStatus } from '../models/Plan';
 import { REPORT_REASONS, REPORT_SEVERITIES } from '../models/Report';
 import { IUser, PHOTO_MAX_LENGTH, USER_ROLES, UserRole } from '../models/User';
 
+// Cuantos elementos devuelve un listado si la peticion no dice limit. Esta en un solo sitio para
+// que todos los listados paginen igual
+export const PAGE_SIZE = 10;
+
 export interface PaginationQuery {
     page: number;
     limit: number;
@@ -151,14 +155,14 @@ export const Schemas = {
     // Validacion de los parametros de paginacion
     pagination: Joi.object<PaginationQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
         search: Joi.string().trim().max(100).allow('').default('')
     }),
 
     // Validacion de los filtros del listado de usuarios: los de la paginacion y tres mas
     userList: Joi.object<UserListQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
         search: Joi.string().trim().max(100).allow('').default(''),
 
         // Solo los usuarios de un rol
@@ -177,7 +181,7 @@ export const Schemas = {
     // Validacion de los filtros del listado de Dates
     dateList: Joi.object<DateListQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
 
         // Solo los de una bandeja: pending, ongoing o closed
         status: Joi.string().valid(...DATE_STATUSES),
@@ -189,7 +193,7 @@ export const Schemas = {
     // Validacion de los filtros del listado de Planes
     planList: Joi.object<PlanListQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
 
         // Texto que se busca en el sitio de las tiradas ("cafe" encuentra "Cafetería de la EETAC")
         search: Joi.string().trim().max(100).allow('').default(''),
@@ -207,7 +211,7 @@ export const Schemas = {
     // Validacion de los filtros del listado de votos
     gradeList: Joi.object<GradeListQuery>({
         page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(5),
+        limit: Joi.number().integer().min(1).max(100).default(PAGE_SIZE),
 
         // Solo los A+ o solo los F
         value: Joi.string().valid(...GRADE_VALUES),

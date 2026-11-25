@@ -48,6 +48,7 @@ export const getDateById = (dateId: string, requester: AuthUser) => {
 //   - Comprueba que existen (aunque esten inactivos) y que no hay ya un Date entre los dos
 //   - Sortea a quien le toca escribir primero (Math.random da un numero entre 0 y 1)
 //   - Caduca en 24 horas
+//   - Empieza su historial con la primera entrada: "Pendiente", sin autor porque lo abre el servidor
 // Devuelve { error } si algo falla, para que el controlador elija el codigo, o { date } si se ha abierto
 export const createDate = async (userA: string, userB: string) => {
     const [a, b] = await Promise.all([
@@ -69,7 +70,8 @@ export const createDate = async (userA: string, userB: string) => {
     const created = await DateModel.create({
         users: [userA, userB],
         firstTurn: Math.random() < 0.5 ? userA : userB,
-        expiresAt: new Date(Date.now() + DATE_DURATION_MS)
+        expiresAt: new Date(Date.now() + DATE_DURATION_MS),
+        history: [{ status: 'pending', reason: 'A+ mutuo', at: new Date() }]
     });
 
     return { date: await created.populate(POPULATE_USERS) };

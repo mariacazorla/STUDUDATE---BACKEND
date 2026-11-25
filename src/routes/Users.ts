@@ -68,7 +68,7 @@ router.get('/directory', VerifyToken, controller.readDirectory);
  *         description: Número de página
  *       - in: query
  *         name: limit
- *         schema: { type: integer, minimum: 1, maximum: 100, default: 5 }
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
  *         description: Número de usuarios por página
  *       - in: query
  *         name: search

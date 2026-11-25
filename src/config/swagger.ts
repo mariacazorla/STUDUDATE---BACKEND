@@ -264,10 +264,10 @@ const swaggerDocument = swaggerJsdoc({
                             grades: { type: 'array', items: gradeSchema },
                             total: { type: 'integer', example: 25 },
                             page: { type: 'integer', example: 1 },
-                            pages: { type: 'integer', example: 5 }
+                            pages: { type: 'integer', example: 3 }
                         }
                     },
-                    { grades: [gradeExample], total: 25, page: 1, pages: 5 }
+                    { grades: [gradeExample], total: 25, page: 1, pages: 3 }
                 ),
                 DateOne: okResponse('Un Date, con los datos de los dos usuarios', { type: 'object', properties: { date: dateSchema } }, { date: dateExample }),
                 DateList: okResponse(
