@@ -443,6 +443,34 @@ curl -X DELETE http://localhost:1337/users/<id de un usuario no archivado> -H "A
 La última responde 409 "Archiva el usuario antes de eliminarlo". Las mismas pruebas se pueden hacer desde
 la página de Swagger.
 
+## Docker
+
+La imagen de la API se construye con el `Dockerfile` de la raíz, en dos etapas como en el Seminario 10:
+la primera compila el TypeScript y la segunda se queda solo con lo compilado (`build/`) y las dependencias
+de producción. No lleva el código fuente, ni TypeScript, ni ningún `.env`.
+
+```
+docker build -t studate-api .
+docker run --rm -p 1337:1337 --env-file .env studate-api
+```
+
+**La imagen es la misma en todos los entornos.** Lo que cambia son las variables de entorno que recibe el
+contenedor al arrancar (las de la tabla de arriba). En el servidor, la API va detrás de nginx en `/api`, así
+que ahí se pone `REFRESH_COOKIE_PATH=/api/auth`, y `COOKIE_SECURE` según haya HTTPS o no.
+
+A diferencia del Seminario 10, el seed va dentro de la imagen, compilado (`build/seed.js`), para poder
+llenar la base de datos del servidor sin tener el código allí:
+
+```
+docker run --rm --env-file .env studate-api node build/seed.js
+```
+
+Con `MONGO_URL` apuntando al MongoDB de ese entorno (en el compose, `mongodb://mongodb:27017/studate`).
+Solo inserta si la base de datos está vacía; con `--reset` la rehace.
+
+El `docker compose` que levanta MongoDB, la API y la web está en el repositorio
+[STUDATE---DOCKER](https://github.com/mariacazorla/STUDATE---DOCKER).
+
 ## Cómo contribuir
 
 Ramas, commits y pull requests en [CONTRIBUTING.md](CONTRIBUTING.md). Tareas pendientes y bitácora en

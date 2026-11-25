@@ -158,3 +158,16 @@ Modelo en el Sprint 2: Claude Fable 5.2.
   - Paginación de 10 con una sola constante (`PAGE_SIZE`).
   - Un `fix` aparte para el borrado: con cada Date se borran su Plan y sus mensajes, y con el usuario, sus bloqueos, partes y alertas.
   - El seed importa los modelos nuevos, espera a sus índices con `init()` y crea datos de ejemplo de todo. Swagger documenta los esquemas nuevos y los dos modos del refresh.
+
+### 2. Primer despliegue en Docker: la imagen de la API (`feat/docker`)
+
+- **Pregunta:** cómo meter la API en una imagen de Docker que sirva igual en local y en el servidor, a partir del Seminario 10.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Con la estructura hecha y el login funcionando, toca el primer despliegue en Docker (bloque 2 del plan, de la 16 a la 19). Lo hacemos ya, con poco dentro, para ver si hay problemas con el servidor y no dejarlo para el final. Se hace como en el Seminario 10: te paso los repos del seminario y los datos del servidor. La conexión tiene que ir por HTTPS. A simple vista, con lo que tenemos del Seminario 10 ya tendríamos todo; si consideras que falta algo, me lo comentas. La contraseña no se escribe en ningún sitio. Hace falta el Dockerfile de la API, el de la web servida con nginx y el docker compose con MongoDB, la API y la web en el repo de despliegue. Primero que funcione en local y después en el servidor, y al final probar desde fuera que se puede iniciar sesión. Dime el plan de acción.» Después del análisis del Seminario 10: «Continúa con la parte local» mientras se consiguen los datos del servidor.
+- **Incoherencias:**
+  - En el Seminario 10 el seed no va en la imagen porque se ejecuta con `tsx` (dependencia de desarrollo): para llenar la base de datos del servidor hay que tener el código allí.
+  - Al arrancar, `server.ts` no termina el proceso si MongoDB no responde: el contenedor se quedaría vivo sin servidor. Con el `healthcheck` de MongoDB en el compose y los 30 segundos de reintento de Mongoose no llega a pasar, así que no se ha tocado.
+- **Solución:**
+  - `Dockerfile` en dos etapas con `node:24-alpine`: la primera compila y la segunda se queda con `build/` y las dependencias de producción, sin código fuente ni `.env`, y corre como el usuario `node`. `.dockerignore` deja fuera `node_modules`, `build`, `.git` y cualquier `.env`.
+  - El seed se compila con el resto (`build/seed.js`) y se ejecuta dentro del contenedor con `node`, sin `tsx`.
+  - Un workflow de GitHub Actions pasa lint y build y publica la imagen en ghcr.io (`latest` desde `main`, `develop` desde `develop`).
+  - Probado en local: `docker build`, el seed contra un MongoDB en una red de Docker sin puerto público, y el login con la cookie en `/api/auth` (la ruta que tendrá detrás de nginx).
