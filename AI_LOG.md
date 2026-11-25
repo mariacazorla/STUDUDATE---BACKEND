@@ -196,3 +196,19 @@ Modelo en el Sprint 2: Claude Fable 5.2.
   - `getMe` (perfil completo con `+trustedContacts`) separado de `getUserById` (ligero, el de `VerifyToken`). `PUT /users/me` con `updateMe` y `findOneAndUpdate` con `runValidators`.
   - El esquema `user.updateMe` reutiliza los campos del perfil y deja fuera `email`, `role` y `active`: enviar `role: 'admin'` responde 422. Los contactos, como lista opcional de hasta 3 (`[]` los quita).
   - Swagger con `MyProfileInput` y la ruta PUT documentada; contrato y bitácora en LOGS.
+
+### 5. Mis Dates y chat (`feat/chat`)
+
+- **Pregunta:** cómo montar el chat de los Dates en tiempo real con socket.io, con el JWT también en el socket, y que todo quede registrado: los mensajes y cada cambio de estado del Date, con quién y cuándo.
+- **Prompt:** «Según la planificación establecida previamente, vamos a proceder de esta forma. Toca montar lo de las citas: Mis Dates y el chat (bloque 5 del plan, de la 29 a la 33). Aquí es donde volvemos a usar socket.io, y como es un chat, tiene que ser en tiempo real. Usa bien JSON Web Token también en el socket: sin token no se conecta nadie. Usa los modelos nuevos que ya creamos en la estructura, adaptados a lo que queremos montar. Y todo tiene que quedar bien registrado con su historial: los mensajes y los movimientos de cada Date, es decir, cada cambio de estado con quién lo hizo y cuándo. Primero el backend y después la web, con el estilo y el CSS global de siempre. Dime el plan de acción.» Diego pidió que se hicieran todos los bloques seguidos sin parar en cada uno, preguntando solo si surgía algo.
+- **Incoherencias:**
+  - El chat del Seminario 10 tiene salas con nombre (`general`, `group:`, `direct:`) y el historial va por el propio socket. En Studate la sala es el Date y el historial tiene que ser paginado, así que el historial va por HTTP y el socket solo lleva lo que pasa ahora.
+  - El middleware del socket del seminario rechaza todo con un `Authentication error` genérico; con eso el frontend no sabe si le basta con renovar el token.
+  - `POST /dates` y `PUT /dates/:dateId` dejaban a un estudiante abrir y cambiar Dates a mano, y `updateStatus` cambiaba el estado sin apuntar nada en el `history`. El plan dice "estados automáticos y sin Dates a mano".
+  - El cierre por caducidad estaba previsto en el modelo (índice `(status, expiresAt)` y `closedReason: 'expired'`) pero nadie lo ejecutaba.
+  - La prórroga no es un cambio de estado, pero sí un movimiento del Date que hay que registrar.
+- **Solución:**
+  - `VerifySocketToken` lee el token del handshake y responde con los mismos mensajes que el 401 de la API; comprueba también que el usuario siga activo, como `VerifyToken`.
+  - `ChatService` con las reglas (solo los dos del Date, turno de `firstTurn` mientras está pendiente, nada en un Date cerrado) y `sockets/Chat.ts` con los eventos `date:join`, `date:message`, `date:read`, `date:updated` y `chat:error`; el texto se valida con el mismo Joi que una ruta.
+  - `GET /dates/:dateId/messages` paginado (página 1, los más nuevos). `POST` y `PUT /dates` solo admin; `updateStatus`, `extendDate`, el primer mensaje y el cierre por caducidad escriben en el `history` con `by`, `reason` y `at`. `jobs/ExpireDates.ts` cierra los pendientes caducados cada minuto y avisa a la sala.
+  - README con la tabla de eventos del socket, contrato en LOGS y 56 comprobaciones con `fetch` y `socket.io-client`.
